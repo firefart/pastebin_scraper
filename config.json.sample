@@ -1,0 +1,12 @@
+{
+  "mailserver": "localhost",
+  "mailport": 25,
+  "mailfrom": "Pastebin Alert <xxx@xxx.com>",
+  "mailto": "Unknown Person <xxx@xxx.com>",
+  "mailtoerror": "error@xxx.xom",
+  "keywords": [
+    "keyword1",
+    "keyword2",
+    "keyword3"
+  ]
+}
