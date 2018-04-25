@@ -24,7 +24,7 @@ import (
 )
 
 const (
-  apiEndpoint = "https://pastebin.com/api_scraping.php"
+  apiEndpoint = "https://scrape.pastebin.com/api_scraping.php"
   userAgent   = "Pastebin Scraper (https://firefart.at)"
 )
 
