@@ -150,7 +150,7 @@ func httpRequest(url string) (*http.Response, error) {
   }
   req.Header.Set("User-Agent", userAgent)
 
-  resp, err = client.Do(req)
+  resp, err := client.Do(req)
   return resp, err
 }
 
