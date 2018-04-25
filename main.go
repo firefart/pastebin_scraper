@@ -143,15 +143,29 @@ func debugOutput(s string) {
   }
 }
 
-func httpRequest(url string) (resp *http.Response, err error) {
+func httpRequest(url string) (*http.Response, error) {
   req, err := http.NewRequest("GET", url, nil)
   if err != nil {
-    return
+    return nil, err
   }
   req.Header.Set("User-Agent", userAgent)
 
   resp, err = client.Do(req)
-  return
+  return resp, err
+}
+
+func httpRespBodyToString(resp *http.Response) (string, error) {
+  if resp == nil {
+    return "", errors.New("Response is nil")
+  }
+  defer resp.Body.Close()
+  body, err := ioutil.ReadAll(resp.Body)
+  if err != nil {
+    return "", err
+  }
+
+  b := string(body)
+  return b, nil
 }
 
 func fetchPasteList() (list []Paste, err error) {
@@ -164,7 +178,11 @@ func fetchPasteList() (list []Paste, err error) {
   jsonErr := json.NewDecoder(resp.Body).Decode(&list)
   lastCheck = time.Now()
   if jsonErr != nil {
-    err = errors.New(fmt.Sprintf("Error on parsing JSON: %s. JSON: %s", jsonErr.Error(), resp.Body))
+    b, err := httpRespBodyToString(resp)
+    if err != nil {
+      b = err.Error()
+    }
+    err = errors.New(fmt.Sprintf("Error on parsing JSON: %s. JSON: %s", jsonErr.Error(), b))
   }
   return
 }
@@ -239,23 +257,19 @@ func checkKeywords(body string) (bool, map[string]string) {
   return status, found
 }
 
-func fetch(paste Paste) (err error) {
+func fetch(paste Paste) (error) {
   debugOutput(fmt.Sprintf("Checking Paste %s", paste.Key))
   alredyChecked[paste.Key] = time.Now()
   resp, err := httpRequest(paste.Scrape_url)
   if err != nil {
-    return
+    return err
   }
 
   if resp.StatusCode == 200 || resp.ContentLength > 0 {
-    defer resp.Body.Close()
-    body, err := ioutil.ReadAll(resp.Body)
+    b, err := httpRespBodyToString(resp)
     if err != nil {
-      // need to specify err because of shadowing
       return err
     }
-
-    b := string(body)
     found, key := checkKeywords(b)
     if found {
       paste.Content = b
@@ -263,10 +277,13 @@ func fetch(paste Paste) (err error) {
       chanOutput <- paste
     }
   } else {
-    err = errors.New(fmt.Sprintf("Output: %s, Error: %s", resp.Body, err.Error()))
-    return
+    b, err := httpRespBodyToString(resp)
+    if err != nil {
+      b = err.Error()
+    }
+    return errors.New(fmt.Sprintf("Output: %s, Error: %s", b, err.Error()))
   }
-  return
+  return nil
 }
 
 func main() {
