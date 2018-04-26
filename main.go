@@ -168,31 +168,37 @@ func httpRespBodyToString(resp *http.Response) (string, error) {
   return b, nil
 }
 
-func fetchPasteList() (list []Paste, err error) {
+func fetchPasteList() ([]Paste, error) {
+  var list []Paste
   debugOutput("Fetching paste list")
   url := fmt.Sprintf("%s?limit=100", apiEndpoint)
   resp, err := httpRequest(url)
   if err != nil {
-    return
+    return list, err
   }
-  jsonErr := json.NewDecoder(resp.Body).Decode(&list)
+
+  body, err := httpRespBodyToString(resp)
+  if err != nil {
+    return list, err
+  }
+  if strings.Contains(body, "DOES NOT HAVE ACCESS") {
+    panic("You do not have access to the scrape API from this IP address!")
+  }
+
   lastCheck = time.Now()
+  jsonErr := json.Unmarshal([]byte(body), &list)
   if jsonErr != nil {
-    b, err := httpRespBodyToString(resp)
-    if err != nil {
-      b = err.Error()
-    }
-    err = errors.New(fmt.Sprintf("Error on parsing JSON: %s. JSON: %s", jsonErr.Error(), b))
+    return list, errors.New(fmt.Sprintf("Error on parsing JSON: %s. JSON: %s", jsonErr.Error(), body))
   }
-  return
+  return list, nil
 }
 
-func sendEmail(m *gomail.Message) (err error) {
+func sendEmail(m *gomail.Message) (error) {
   debugOutput("Sending Mail")
   d := gomail.Dialer{Host: configuration.Mailserver, Port: configuration.Mailport}
   d.TLSConfig = &tls.Config{InsecureSkipVerify: true}
-  err = d.DialAndSend(m)
-  return
+  err := d.DialAndSend(m)
+  return err
 }
 
 func getKeysFromMap(in map[string]string) []string {
