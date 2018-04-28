@@ -342,8 +342,10 @@ func main() {
     for err := range chanError {
       log.Println(err.Error())
       if configuration.Mailonerror {
-      // ignore errors when sending error mail
-        sendErrorMessage(err.Error())
+        err2 := sendErrorMessage(err.Error())
+        if err2 != nil {
+          log.Printf("ERROR on sending error mail: %s", err2.Error())
+        }
       }
     }
   }()
