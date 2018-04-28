@@ -3,6 +3,7 @@
   "mailport": 25,
   "mailfrom": "Pastebin Alert <xxx@xxx.com>",
   "mailto": "Unknown Person <xxx@xxx.com>",
+  "mailonerror": true,
   "mailtoerror": "error@xxx.xom",
   "keywords": [
     "keyword1",

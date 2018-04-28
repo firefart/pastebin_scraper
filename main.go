@@ -58,6 +58,7 @@ type Configuration struct {
   Mailserver  string
   Mailport    int
   Mailfrom    string
+  Mailonerror bool
   Mailtoerror string
   Mailto      string
   Mailsubject string
@@ -340,8 +341,10 @@ func main() {
     defer wgError.Done()
     for err := range chanError {
       log.Println(err.Error())
-      // ignore errors
-      sendErrorMessage(err.Error())
+      if configuration.Mailonerror {
+      // ignore errors when sending error mail
+        sendErrorMessage(err.Error())
+      }
     }
   }()
 
