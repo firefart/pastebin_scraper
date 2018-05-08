@@ -89,35 +89,35 @@ func randomString(strlen int) string {
 
 func pasteToPrettyString(p paste) string {
 	keywords := strings.Join(getKeysFromMap(p.MatchedKeywords), ",")
-	var buffer bytes.Buffer
-	buffer.WriteString(fmt.Sprintf("Pastebin Alert for Keywords %s\n\n", keywords))
+	buf := &bytes.Buffer{}
+	fmt.Fprintf(buf, "Pastebin Alert for Keywords %s\n\n", keywords)
 	if p.Title != "" {
-		buffer.WriteString(fmt.Sprintf("Title: %s\n", p.Title))
+		fmt.Fprintf(buf, "Title: %s\n", p.Title)
 	}
 	if p.FullURL != "" {
-		buffer.WriteString(fmt.Sprintf("URL: %s\n", p.FullURL))
+		fmt.Fprintf(buf, "URL: %s\n", p.FullURL)
 	}
 	if p.User != "" {
-		buffer.WriteString(fmt.Sprintf("User: %s\n", p.User))
+		fmt.Fprintf(buf, "User: %s\n", p.User)
 	}
 	if p.Date != "" {
-		buffer.WriteString(fmt.Sprintf("Date: %s\n", p.Date))
+		fmt.Fprintf(buf, "Date: %s\n", p.Date)
 	}
 	if p.Size != "" {
-		buffer.WriteString(fmt.Sprintf("Size: %s\n", p.Size))
+		fmt.Fprintf(buf, "Size: %s\n", p.Size)
 	}
 	if p.Expire != "" {
-		buffer.WriteString(fmt.Sprintf("Expire: %s\n", p.Expire))
+		fmt.Fprintf(buf, "Expire: %s\n", p.Expire)
 	}
 	if p.Syntax != "" {
-		buffer.WriteString(fmt.Sprintf("Syntax: %s\n", p.Syntax))
+		fmt.Fprintf(buf, "Syntax: %s\n", p.Syntax)
 	}
 
 	for k, v := range p.MatchedKeywords {
-		buffer.WriteString(fmt.Sprintf("\nFirst match of Keyword: %s\n%s", k, v))
+		fmt.Fprintf(buf, "\nFirst match of Keyword: %s\n%s", k, v)
 	}
 
-	return buffer.String()
+	return buf.String()
 }
 
 func createZip(filename string, content string) (zipContent []byte, err error) {
