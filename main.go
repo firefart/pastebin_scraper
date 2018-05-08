@@ -3,7 +3,6 @@ package main
 import (
   "encoding/json"
   "crypto/tls"
-  "errors"
   "flag"
   "fmt"
   "io/ioutil"
@@ -29,21 +28,21 @@ const (
 )
 
 var (
-  debug  = flag.Bool("debug", false, "Print debug output")
-  config = flag.String("config", "", "Config File to use")
+  debug      = flag.Bool("debug", false, "Print debug output")
+  configFile = flag.String("config", "", "Config File to use")
 
-  configuration Configuration
+  config configuration
 
   lastCheck time.Time
   terminate = false
   alredyChecked = make(map[string]time.Time)
 
   client = &http.Client{
-    Timeout: time.Duration(10 * time.Second),
+    Timeout: 10 * time.Second,
   }
 
   chanError  = make(chan error)
-  chanOutput = make(chan Paste)
+  chanOutput = make(chan paste)
   chanSignal = make(chan os.Signal)
 
   wgOutput sync.WaitGroup
@@ -54,28 +53,27 @@ var (
   keywordsRegex = make(map[string]*regexp.Regexp)
 )
 
-type Configuration struct {
-  Mailserver  string
-  Mailport    int
-  Mailfrom    string
-  Mailonerror bool
-  Mailtoerror string
-  Mailto      string
-  Mailsubject string
-  Keywords    []string
-  Errorfile   string
+type configuration struct {
+  Mailserver  string    `json:"mailserver"`
+  Mailport    int       `json:"mailport"`
+  Mailfrom    string    `json:"mailfrom"`
+  Mailonerror bool      `json:"mailonerror"`
+  Mailtoerror string    `json:"mailtoerror"`
+  Mailto      string    `json:"mailto"`
+  Mailsubject string    `json:"mailsubject"`
+  Keywords    []string  `json:"keywords"`
 }
 
-type Paste struct {
-  Full_url          string
-  Scrape_url        string
-  Date              string
-  Key               string
-  Size              string
-  Expire            string
-  Title             string
-  Syntax            string
-  User              string
+type paste struct {
+  FullURL           string  `json:"full_url"`
+  ScrapeURL         string  `json:"scrape_url"`
+  Date              string  `json:"date"`
+  Key               string  `json:"key"`
+  Size              string  `json:"size"`
+  Expire            string  `json:"expire"`
+  Title             string  `json:"title"`
+  Syntax            string  `json:"syntax"`
+  User              string  `json:"user"`
   Content           string
   MatchedKeywords   map[string]string
 }
@@ -89,33 +87,33 @@ func randomString(strlen int) string {
   return string(result)
 }
 
-func pasteToPrettyString(paste Paste) string {
-  keywords := strings.Join(getKeysFromMap(paste.MatchedKeywords), ",")
+func pasteToPrettyString(p paste) string {
+  keywords := strings.Join(getKeysFromMap(p.MatchedKeywords), ",")
   var buffer bytes.Buffer
   buffer.WriteString(fmt.Sprintf("Pastebin Alert for Keywords %s\n\n", keywords))
-  if paste.Title != "" {
-    buffer.WriteString(fmt.Sprintf("Title: %s\n", paste.Title))
+  if p.Title != "" {
+    buffer.WriteString(fmt.Sprintf("Title: %s\n", p.Title))
   }
-  if paste.Full_url != "" {
-    buffer.WriteString(fmt.Sprintf("URL: %s\n", paste.Full_url))
+  if p.FullURL != "" {
+    buffer.WriteString(fmt.Sprintf("URL: %s\n", p.FullURL))
   }
-  if paste.User != "" {
-    buffer.WriteString(fmt.Sprintf("User: %s\n", paste.User))
+  if p.User != "" {
+    buffer.WriteString(fmt.Sprintf("User: %s\n", p.User))
   }
-  if paste.Date != "" {
-    buffer.WriteString(fmt.Sprintf("Date: %s\n", paste.Date))
+  if p.Date != "" {
+    buffer.WriteString(fmt.Sprintf("Date: %s\n", p.Date))
   }
-  if paste.Size != "" {
-    buffer.WriteString(fmt.Sprintf("Size: %s\n", paste.Size))
+  if p.Size != "" {
+    buffer.WriteString(fmt.Sprintf("Size: %s\n", p.Size))
   }
-  if paste.Expire != "" {
-    buffer.WriteString(fmt.Sprintf("Expire: %s\n", paste.Expire))
+  if p.Expire != "" {
+    buffer.WriteString(fmt.Sprintf("Expire: %s\n", p.Expire))
   }
-  if paste.Syntax != "" {
-    buffer.WriteString(fmt.Sprintf("Syntax: %s\n", paste.Syntax))
+  if p.Syntax != "" {
+    buffer.WriteString(fmt.Sprintf("Syntax: %s\n", p.Syntax))
   }
 
-  for k, v := range paste.MatchedKeywords {
+  for k, v := range p.MatchedKeywords {
     buffer.WriteString(fmt.Sprintf("\nFirst match of Keyword: %s\n%s", k, v))
   }
 
@@ -155,22 +153,30 @@ func httpRequest(url string) (*http.Response, error) {
   return resp, err
 }
 
-func httpRespBodyToString(resp *http.Response) (string, error) {
+func httpRespBodyToString(resp *http.Response) (res string, err error) {
   if resp == nil {
-    return "", errors.New("Response is nil")
+    return "", fmt.Errorf("Response is nil")
   }
-  defer resp.Body.Close()
+
+  // catch errors when closing and return them
+  defer func() {
+    rerr := resp.Body.Close()
+    if rerr != nil {
+      err = rerr
+    }
+  }()
+
   body, err := ioutil.ReadAll(resp.Body)
   if err != nil {
     return "", err
   }
 
-  b := string(body)
-  return b, nil
+  res = string(body)
+  return res, nil
 }
 
-func fetchPasteList() ([]Paste, error) {
-  var list []Paste
+func fetchPasteList() ([]paste, error) {
+  var list []paste
   debugOutput("Fetching paste list")
   url := fmt.Sprintf("%s?limit=100", apiEndpoint)
   resp, err := httpRequest(url)
@@ -189,15 +195,15 @@ func fetchPasteList() ([]Paste, error) {
   lastCheck = time.Now()
   jsonErr := json.Unmarshal([]byte(body), &list)
   if jsonErr != nil {
-    return list, errors.New(fmt.Sprintf("Error on parsing JSON: %s. JSON: %s", jsonErr.Error(), body))
+    return list, fmt.Errorf("Error on parsing JSON: %v. JSON: %s", jsonErr, body)
   }
   return list, nil
 }
 
 func sendEmail(m *gomail.Message) (error) {
   debugOutput("Sending Mail")
-  d := gomail.Dialer{Host: configuration.Mailserver, Port: configuration.Mailport}
-  d.TLSConfig = &tls.Config{InsecureSkipVerify: true}
+  d := gomail.Dialer{Host: config.Mailserver, Port: config.Mailport}
+  d.TLSConfig = &tls.Config{InsecureSkipVerify: true} // nolint: gas
   err := d.DialAndSend(m)
   return err
 }
@@ -210,41 +216,57 @@ func getKeysFromMap(in map[string]string) []string {
     return keys
 }
 
-func sendPasteMessage(paste Paste) (err error) {
+func sendPasteMessage(p paste) (err error) {
   m := gomail.NewMessage()
-  m.SetHeader("From", configuration.Mailfrom)
-  m.SetHeader("To", configuration.Mailto)
-  keywords := strings.Join(getKeysFromMap(paste.MatchedKeywords), ",")
+  m.SetHeader("From", config.Mailfrom)
+  m.SetHeader("To", config.Mailto)
+  keywords := strings.Join(getKeysFromMap(p.MatchedKeywords), ",")
   m.SetHeader("Subject", fmt.Sprintf("Pastebin Alert for %s", keywords))
 
   filename := fmt.Sprintf("%s.zip", randomString(10))
   fullPath := path.Join(os.TempDir(), filename)
-  zipFile, err := createZip("content.txt", paste.Content)
+  zipFile, err := createZip("content.txt", p.Content)
   if err != nil {
-    return
+    return err
   }
 
   f, err := os.Create(fullPath)
   if err != nil {
-    return
+    return err
   }
-  defer os.Remove(fullPath)
-  f.Write(zipFile)
-  f.Close()
+  defer func() {
+    rerr := os.Remove(fullPath)
+    if rerr != nil {
+      err = rerr
+    }
+  }()
+
+  _, err = f.Write(zipFile)
+  if err != nil {
+    return err
+  }
+
+  defer func() {
+    rerr := f.Close()
+    if rerr != nil {
+      err = rerr
+    }
+  }()
+
   m.Attach(fullPath)
 
-  body := pasteToPrettyString(paste)
+  body := pasteToPrettyString(p)
   m.SetBody("text/plain", body)
   err = sendEmail(m)
-  return
+  return err
 }
 
-func sendErrorMessage(errorString string) error {
+func sendErrorMessage(errorMessage error) error {
   m := gomail.NewMessage()
-  m.SetHeader("From", configuration.Mailfrom)
-  m.SetHeader("To", configuration.Mailtoerror)
+  m.SetHeader("From", config.Mailfrom)
+  m.SetHeader("To", config.Mailtoerror)
   m.SetHeader("Subject", "ERROR in pastebin_scraper")
-  m.SetBody("text/plain", errorString)
+  m.SetBody("text/plain", fmt.Sprintf("%v", errorMessage))
 
   err := sendEmail(m)
   return err
@@ -264,52 +286,57 @@ func checkKeywords(body string) (bool, map[string]string) {
   return status, found
 }
 
-func fetch(paste Paste) (error) {
-  debugOutput(fmt.Sprintf("Checking Paste %s", paste.Key))
-  alredyChecked[paste.Key] = time.Now()
-  resp, err := httpRequest(paste.Scrape_url)
+func fetch(p paste) (error) {
+  debugOutput(fmt.Sprintf("Checking Paste %s", p.Key))
+  alredyChecked[p.Key] = time.Now()
+  resp, err := httpRequest(p.ScrapeURL)
   if err != nil {
     return err
   }
 
-  if resp.StatusCode == 200 || resp.ContentLength > 0 {
+  if resp.StatusCode == http.StatusOK || resp.ContentLength > 0 {
     b, err := httpRespBodyToString(resp)
     if err != nil {
       return err
     }
     found, key := checkKeywords(b)
     if found {
-      paste.Content = b
-      paste.MatchedKeywords = key
-      chanOutput <- paste
+      p.Content = b
+      p.MatchedKeywords = key
+      chanOutput <- p
     }
   } else {
     b, err := httpRespBodyToString(resp)
-    if err != nil {
-      b = err.Error()
-    }
-    return errors.New(fmt.Sprintf("Output: %s, Error: %s", b, err.Error()))
+    return fmt.Errorf("Output: %s, Error: %v", b, err)
   }
   return nil
 }
 
+// nolint: gocyclo
 func main() {
   flag.Parse()
 
-  if *config == "" {
+  if *configFile == "" {
     log.Fatalln("Please provide a valid config file")
   }
 
-  file, err := os.Open(*config)
+  file, err := os.Open(*configFile)
   if err != nil {
-    log.Fatalf("Error opening config file: %s", err.Error())
+    log.Fatalf("Error opening config file: %v", err)
   }
-  defer file.Close()
+
+  defer func() {
+    rerr := file.Close()
+    if rerr != nil {
+      log.Fatalf("Error closing config file: %v", rerr)
+    }
+  }()
+
   decoder := json.NewDecoder(file)
-  configuration = Configuration{}
-  err = decoder.Decode(&configuration)
+  config = configuration{}
+  err = decoder.Decode(&config)
   if err != nil {
-    log.Fatalf("Error parsing config file: %s", err.Error())
+    log.Fatalf("Error parsing config file: %v", err)
   }
 
   log.Println("Starting Pastebin Scraper")
@@ -328,11 +355,11 @@ func main() {
 
   go func() {
     defer wgOutput.Done()
-    for paste := range chanOutput {
-      debugOutput(fmt.Sprintf("Found Paste:\n%s", pasteToPrettyString(paste)))
-      err = sendPasteMessage(paste)
+    for p := range chanOutput {
+      debugOutput(fmt.Sprintf("Found Paste:\n%s", pasteToPrettyString(p)))
+      err = sendPasteMessage(p)
       if err != nil {
-        chanError <- errors.New(fmt.Sprintf("sendPasteMessage: %s", err.Error()))
+        chanError <- fmt.Errorf("sendPasteMessage: %v", err)
       }
     }
   }()
@@ -340,18 +367,18 @@ func main() {
   go func() {
     defer wgError.Done()
     for err := range chanError {
-      log.Println(err.Error())
-      if configuration.Mailonerror {
-        err2 := sendErrorMessage(err.Error())
+      log.Printf("%v", err)
+      if config.Mailonerror {
+        err2 := sendErrorMessage(err)
         if err2 != nil {
-          log.Printf("ERROR on sending error mail: %s", err2.Error())
+          log.Printf("ERROR on sending error mail: %v", err2)
         }
       }
     }
   }()
 
   // use a boundary for keyword searching
-  for _, k := range configuration.Keywords {
+  for _, k := range config.Keywords {
     r := fmt.Sprintf(`(?im)^(.*\b%s.*)$`, regexp.QuoteMeta(k))
     keywordsRegex[k] = regexp.MustCompile(r)
   }
@@ -362,7 +389,7 @@ func main() {
     }
 
     // Only fetch the main list once a minute
-    sleepTime := lastCheck.Add(1 * time.Minute).Sub(time.Now())
+    sleepTime := time.Until(lastCheck.Add(1 * time.Minute))
     if sleepTime > 0 {
       debugOutput(fmt.Sprintf("Sleeping for %s", sleepTime))
       time.Sleep(sleepTime)
@@ -370,19 +397,19 @@ func main() {
 
     pastes, err := fetchPasteList()
     if err != nil {
-      chanError <- errors.New(fmt.Sprintf("fetchPasteList: %s", err.Error()))
+      chanError <- fmt.Errorf("fetchPasteList: %v", err)
     }
 
-    for _, paste := range pastes {
+    for _, p := range pastes {
       if terminate {
         break
       }
-      if _, ok := alredyChecked[paste.Key]; ok {
-        debugOutput(fmt.Sprintf("Skipping key %s as it was already checked", paste.Key))
+      if _, ok := alredyChecked[p.Key]; ok {
+        debugOutput(fmt.Sprintf("Skipping key %s as it was already checked", p.Key))
       } else {
-        err := fetch(paste)
+        err := fetch(p)
         if err != nil {
-          chanError <- errors.New(fmt.Sprintf("fetch: %s", err.Error()))
+          chanError <- fmt.Errorf("fetch: %v", err)
         }
         // do not hammer the API
         time.Sleep(1 * time.Second)

@@ -5,6 +5,10 @@ ARCH := amd64
 PLATFORMS := windows linux darwin
 os = $(word 1, $@)
 
+GOPATH := $(or $(GOPATH), $(HOME)/go)
+BIN_DIR := $(GOPATH)/bin
+GOMETALINTER := $(BIN_DIR)/gometalinter
+
 .DEFAULT_GOAL := build
 
 .PHONY: $(PLATFORMS)
@@ -13,10 +17,10 @@ $(PLATFORMS):
 	zip -j $(OUTDIR)/$(BINARY)-$(VERSION)-$(os)-$(ARCH).zip $(OUTDIR)/$(BINARY)-$(VERSION)-$(os)-$(ARCH)
 
 .PHONY: release
-release: clean deps $(PLATFORMS)
+release: clean deps lint $(PLATFORMS)
 
 .PHONY: build
-build: deps
+build:
 	go build .
 
 .PHONY: deps
@@ -26,3 +30,11 @@ deps:
 .PHONY: clean
 clean:
 	rm -rf $(OUTDIR)/*
+
+$(GOMETALINTER):
+	go get -u github.com/alecthomas/gometalinter
+	$(GOMETALINTER) --install &> /dev/null
+
+.PHONY: lint
+lint: deps $(GOMETALINTER)
+	$(BIN_DIR)/gometalinter .

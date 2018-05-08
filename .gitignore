@@ -2,3 +2,4 @@
 out/
 config.json
 pastebin_scraper
+*.swp
