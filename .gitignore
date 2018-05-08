@@ -2,4 +2,5 @@
 out/
 config.json
 pastebin_scraper
+pastebin_scraper.exe
 *.swp
