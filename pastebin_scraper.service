@@ -9,6 +9,7 @@ Group=nogroup
 SyslogIdentifier=pastebin
 ExecStart=/home/pastebin/pastebin_scraper -config /home/pastebin/config.json
 Restart=on-failure
+RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
