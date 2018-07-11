@@ -1,25 +1,19 @@
 package main
 
 import (
-	"archive/zip"
-	"bytes"
-	"crypto/tls"
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math/rand"
 	"net/http"
 	"os"
 	"os/signal"
-	"path"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
-
-	"gopkg.in/gomail.v2"
 )
 
 const (
@@ -51,161 +45,13 @@ var (
 	r = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	keywordsRegex = make(map[string]*regexp.Regexp)
+	ctx           context.Context
 )
-
-type configuration struct {
-	Mailserver  string   `json:"mailserver"`
-	Mailport    int      `json:"mailport"`
-	Mailfrom    string   `json:"mailfrom"`
-	Mailonerror bool     `json:"mailonerror"`
-	Mailtoerror string   `json:"mailtoerror"`
-	Mailto      string   `json:"mailto"`
-	Mailsubject string   `json:"mailsubject"`
-	Keywords    []string `json:"keywords"`
-}
-
-type paste struct {
-	FullURL         string `json:"full_url"`
-	ScrapeURL       string `json:"scrape_url"`
-	Date            string `json:"date"`
-	Key             string `json:"key"`
-	Size            string `json:"size"`
-	Expire          string `json:"expire"`
-	Title           string `json:"title"`
-	Syntax          string `json:"syntax"`
-	User            string `json:"user"`
-	Content         string
-	MatchedKeywords map[string]string
-}
-
-func randomString(strlen int) string {
-	const chars = "abcdefghijklmnopqrstuvwxyz0123456789"
-	result := make([]byte, strlen)
-	for i := range result {
-		result[i] = chars[r.Intn(len(chars))]
-	}
-	return string(result)
-}
-
-func pasteToPrettyString(p paste) string {
-	keywords := strings.Join(getKeysFromMap(p.MatchedKeywords), ",")
-	buf := &bytes.Buffer{}
-	fmt.Fprintf(buf, "Pastebin Alert for Keywords %s\n\n", keywords)
-	if p.Title != "" {
-		fmt.Fprintf(buf, "Title: %s\n", p.Title)
-	}
-	if p.FullURL != "" {
-		fmt.Fprintf(buf, "URL: %s\n", p.FullURL)
-	}
-	if p.User != "" {
-		fmt.Fprintf(buf, "User: %s\n", p.User)
-	}
-	if p.Date != "" {
-		fmt.Fprintf(buf, "Date: %s\n", p.Date)
-	}
-	if p.Size != "" {
-		fmt.Fprintf(buf, "Size: %s\n", p.Size)
-	}
-	if p.Expire != "" {
-		fmt.Fprintf(buf, "Expire: %s\n", p.Expire)
-	}
-	if p.Syntax != "" {
-		fmt.Fprintf(buf, "Syntax: %s\n", p.Syntax)
-	}
-
-	for k, v := range p.MatchedKeywords {
-		fmt.Fprintf(buf, "\nFirst match of Keyword: %s\n%s", k, v)
-	}
-
-	return buf.String()
-}
-
-func createZip(filename string, content string) (zipContent []byte, err error) {
-	buf := new(bytes.Buffer)
-	w := zip.NewWriter(buf)
-	f, err := w.Create(filename)
-	if err != nil {
-		return
-	}
-	if _, err = f.Write([]byte(content)); err != nil {
-		return
-	}
-	if err = w.Close(); err != nil {
-		return
-	}
-	return buf.Bytes(), nil
-}
 
 func debugOutput(s string) {
 	if *debug {
 		log.Printf("[DEBUG] %s", s)
 	}
-}
-
-func httpRequest(url string) (*http.Response, error) {
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("User-Agent", userAgent)
-
-	resp, err := client.Do(req)
-	return resp, err
-}
-
-func httpRespBodyToString(resp *http.Response) (res string, err error) {
-	if resp == nil {
-		return "", fmt.Errorf("response is nil")
-	}
-
-	// catch errors when closing and return them
-	defer func() {
-		rerr := resp.Body.Close()
-		if rerr != nil {
-			err = rerr
-		}
-	}()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-
-	res = string(body)
-	return res, nil
-}
-
-func fetchPasteList() ([]paste, error) {
-	var list []paste
-	debugOutput("fetching paste list")
-	url := fmt.Sprintf("%s?limit=100", apiEndpoint)
-	resp, err := httpRequest(url)
-	if err != nil {
-		return list, err
-	}
-
-	body, err := httpRespBodyToString(resp)
-	if err != nil {
-		return list, err
-	}
-	if strings.Contains(body, "DOES NOT HAVE ACCESS") {
-		panic("You do not have access to the scrape API from this IP address!")
-	}
-
-	lastCheck = time.Now()
-	jsonErr := json.Unmarshal([]byte(body), &list)
-	if jsonErr != nil {
-		return list, fmt.Errorf("error on parsing json: %v. json: %s", jsonErr, body)
-	}
-	return list, nil
-}
-
-func sendEmail(m *gomail.Message) error {
-	debugOutput("sending mail")
-	d := gomail.Dialer{Host: config.Mailserver, Port: config.Mailport}
-	d.TLSConfig = &tls.Config{InsecureSkipVerify: true} // nolint: gas
-	err := d.DialAndSend(m)
-	return err
 }
 
 func getKeysFromMap(in map[string]string) []string {
@@ -214,63 +60,6 @@ func getKeysFromMap(in map[string]string) []string {
 		keys = append(keys, k)
 	}
 	return keys
-}
-
-func sendPasteMessage(p paste) (err error) {
-	m := gomail.NewMessage()
-	m.SetHeader("From", config.Mailfrom)
-	m.SetHeader("To", config.Mailto)
-	keywords := strings.Join(getKeysFromMap(p.MatchedKeywords), ",")
-	m.SetHeader("Subject", fmt.Sprintf("Pastebin Alert for %s", keywords))
-
-	filename := fmt.Sprintf("%s.zip", randomString(10))
-	fullPath := path.Join(os.TempDir(), filename)
-	zipFile, err := createZip("content.txt", p.Content)
-	if err != nil {
-		return err
-	}
-
-	f, err := os.Create(fullPath)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		rerr := os.Remove(fullPath)
-		if rerr != nil {
-			err = rerr
-		}
-	}()
-
-	_, err = f.Write(zipFile)
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		rerr := f.Close()
-		if rerr != nil {
-			err = rerr
-		}
-	}()
-
-	m.Attach(fullPath)
-
-	body := pasteToPrettyString(p)
-	m.SetBody("text/plain", body)
-	err = sendEmail(m)
-	return err
-}
-
-func sendErrorMessage(errorMessage error) error {
-	debugOutput("sending error mail")
-	m := gomail.NewMessage()
-	m.SetHeader("From", config.Mailfrom)
-	m.SetHeader("To", config.Mailtoerror)
-	m.SetHeader("Subject", "ERROR in pastebin_scraper")
-	m.SetBody("text/plain", fmt.Sprintf("%v", errorMessage))
-
-	err := sendEmail(m)
-	return err
 }
 
 func checkKeywords(body string) (bool, map[string]string) {
@@ -285,32 +74,6 @@ func checkKeywords(body string) (bool, map[string]string) {
 		}
 	}
 	return status, found
-}
-
-func fetch(p paste) error {
-	debugOutput(fmt.Sprintf("checking paste %s", p.Key))
-	alredyChecked[p.Key] = time.Now()
-	resp, err := httpRequest(p.ScrapeURL)
-	if err != nil {
-		return err
-	}
-
-	if resp.StatusCode == http.StatusOK || resp.ContentLength > 0 {
-		b, err := httpRespBodyToString(resp)
-		if err != nil {
-			return err
-		}
-		found, key := checkKeywords(b)
-		if found {
-			p.Content = b
-			p.MatchedKeywords = key
-			chanOutput <- p
-		}
-	} else {
-		b, err := httpRespBodyToString(resp)
-		return fmt.Errorf("Output: %s, Error: %v", b, err)
-	}
-	return nil
 }
 
 // nolint: gocyclo
@@ -342,13 +105,17 @@ func main() {
 
 	log.Println("Starting Pastebin Scraper")
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	// Clean exit when pressing CTRL+C
 	signal.Notify(chanSignal, os.Interrupt)
 	go func() {
 		for range chanSignal {
-			fmt.Println("Detected CTRL+C. Please wait a sec for exit")
+			fmt.Println("CTRL+C pressed")
 			terminate = true
 		}
+		cancel()
 	}()
 
 	wgOutput.Add(1)
@@ -357,8 +124,8 @@ func main() {
 	go func() {
 		defer wgOutput.Done()
 		for p := range chanOutput {
-			debugOutput(fmt.Sprintf("found paste:\n%s", pasteToPrettyString(p)))
-			err = sendPasteMessage(p)
+			debugOutput(fmt.Sprintf("found paste:\n%s", p.toPrettyString()))
+			err = p.sendPasteMessage()
 			if err != nil {
 				chanError <- fmt.Errorf("sendPasteMessage: %v", err)
 			}
@@ -396,7 +163,7 @@ func main() {
 			time.Sleep(sleepTime)
 		}
 
-		pastes, err := fetchPasteList()
+		pastes, err := fetchPasteList(ctx)
 		if err != nil {
 			chanError <- fmt.Errorf("fetchPasteList: %v", err)
 		}
@@ -408,7 +175,7 @@ func main() {
 			if _, ok := alredyChecked[p.Key]; ok {
 				debugOutput(fmt.Sprintf("skipping key %s as it was already checked", p.Key))
 			} else {
-				err := fetch(p)
+				err := p.fetch(ctx)
 				if err != nil {
 					chanError <- fmt.Errorf("fetch: %v", err)
 				}
