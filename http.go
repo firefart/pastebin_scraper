@@ -7,6 +7,10 @@ import (
 	"net/http"
 )
 
+const (
+	userAgent = "Pastebin Scraper (https://firefart.at)"
+)
+
 func httpRequest(ctx context.Context, url string) (*http.Response, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {

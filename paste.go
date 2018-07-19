@@ -14,6 +14,10 @@ import (
 	gomail "gopkg.in/gomail.v2"
 )
 
+const (
+	apiEndpoint = "https://scrape.pastebin.com/api_scraping.php"
+)
+
 type paste struct {
 	FullURL         string `json:"full_url"`
 	ScrapeURL       string `json:"scrape_url"`
@@ -28,7 +32,7 @@ type paste struct {
 	MatchedKeywords map[string]string
 }
 
-func (p *paste) toPrettyString() string {
+func (p *paste) String() string {
 	keywords := strings.Join(getKeysFromMap(p.MatchedKeywords), ",")
 	buf := &bytes.Buffer{}
 	fmt.Fprintf(buf, "Pastebin Alert for Keywords %s\n\n", keywords)
@@ -100,8 +104,7 @@ func (p *paste) sendPasteMessage() (err error) {
 
 	m.Attach(fullPath)
 
-	body := p.toPrettyString()
-	m.SetBody("text/plain", body)
+	m.SetBody("text/plain", p.String())
 	err = sendEmail(m)
 	return err
 }

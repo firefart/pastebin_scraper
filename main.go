@@ -16,11 +16,6 @@ import (
 	"time"
 )
 
-const (
-	apiEndpoint = "https://scrape.pastebin.com/api_scraping.php"
-	userAgent   = "Pastebin Scraper (https://firefart.at)"
-)
-
 var (
 	debug      = flag.Bool("debug", false, "Print debug output")
 	configFile = flag.String("config", "", "Config File to use")
@@ -52,14 +47,6 @@ func debugOutput(s string) {
 	if *debug {
 		log.Printf("[DEBUG] %s", s)
 	}
-}
-
-func getKeysFromMap(in map[string]string) []string {
-	keys := make([]string, 0, len(in))
-	for k := range in {
-		keys = append(keys, k)
-	}
-	return keys
 }
 
 func checkKeywords(body string) (bool, map[string]string) {
@@ -124,7 +111,7 @@ func main() {
 	go func() {
 		defer wgOutput.Done()
 		for p := range chanOutput {
-			debugOutput(fmt.Sprintf("found paste:\n%s", p.toPrettyString()))
+			debugOutput(fmt.Sprintf("found paste:\n%s", p))
 			err = p.sendPasteMessage()
 			if err != nil {
 				chanError <- fmt.Errorf("sendPasteMessage: %v", err)
