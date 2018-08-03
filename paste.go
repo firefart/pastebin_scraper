@@ -110,7 +110,7 @@ func (p *paste) sendPasteMessage() (err error) {
 }
 
 func (p paste) fetch(ctx context.Context) error {
-	debugOutput(fmt.Sprintf("checking paste %s", p.Key))
+	debugOutput("checking paste %s", p.Key)
 	alredyChecked[p.Key] = time.Now()
 	resp, err := httpRequest(ctx, p.ScrapeURL)
 	if err != nil {
