@@ -6,8 +6,8 @@
   "mailonerror": true,
   "mailtoerror": "error@xxx.xom",
   "keywords": [
-    "keyword1",
-    "keyword2",
-    "keyword3"
+    {"keyword": "keyword1", "exceptions": ["exception1", "exception2", "exception3"]},
+    {"keyword": "keyword2", "exceptions": ["exception1", "exception2", "exception3"]},
+    {"keyword": "keyword3", "exceptions": ["exception1", "exception2", "exception3"]}
   ]
 }

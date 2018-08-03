@@ -39,13 +39,17 @@ var (
 
 	r = rand.New(rand.NewSource(time.Now().UnixNano()))
 
-	keywordsRegex = make(map[string]*regexp.Regexp)
-	ctx           context.Context
+	keywordsRegex = make(map[string]keywordRegexType)
 )
 
-func debugOutput(s string) {
+type keywordRegexType struct {
+	regexp     *regexp.Regexp
+	exceptions []string
+}
+
+func debugOutput(s string, a ...interface{}) {
 	if *debug {
-		log.Printf("[DEBUG] %s", s)
+		log.Printf("[DEBUG] %s", fmt.Sprintf(s, a...))
 	}
 }
 
@@ -53,14 +57,27 @@ func checkKeywords(body string) (bool, map[string]string) {
 	found := make(map[string]string)
 	status := false
 	for k, v := range keywordsRegex {
-		if v != nil {
-			if s := v.FindStringSubmatch(body); s != nil {
-				found[k] = strings.TrimSpace(s[1])
-				status = true
+		if v.regexp != nil {
+			if s := v.regexp.FindStringSubmatch(body); s != nil {
+				match := strings.TrimSpace(s[1])
+				if !checkExceptions(match, v.exceptions) {
+					found[k] = match
+					status = true
+				}
 			}
 		}
 	}
 	return status, found
+}
+
+func checkExceptions(s string, exceptions []string) bool {
+	for _, x := range exceptions {
+		if strings.Contains(s, x) {
+			debugOutput("String %q contains exception %q", s, x)
+			return true
+		}
+	}
+	return false
 }
 
 // nolint: gocyclo
@@ -111,7 +128,7 @@ func main() {
 	go func() {
 		defer wgOutput.Done()
 		for p := range chanOutput {
-			debugOutput(fmt.Sprintf("found paste:\n%s", p))
+			debugOutput("found paste:\n%s", p)
 			err = p.sendPasteMessage()
 			if err != nil {
 				chanError <- fmt.Errorf("sendPasteMessage: %v", err)
@@ -134,8 +151,11 @@ func main() {
 
 	// use a boundary for keyword searching
 	for _, k := range config.Keywords {
-		r := fmt.Sprintf(`(?im)^(.*\b%s.*)$`, regexp.QuoteMeta(k))
-		keywordsRegex[k] = regexp.MustCompile(r)
+		r := fmt.Sprintf(`(?im)^(.*\b%s.*)$`, regexp.QuoteMeta(k.Keyword))
+		keywordsRegex[k.Keyword] = keywordRegexType{
+			regexp:     regexp.MustCompile(r),
+			exceptions: k.Exceptions,
+		}
 	}
 
 	for {
@@ -146,7 +166,7 @@ func main() {
 		// Only fetch the main list once a minute
 		sleepTime := time.Until(lastCheck.Add(1 * time.Minute))
 		if sleepTime > 0 {
-			debugOutput(fmt.Sprintf("sleeping for %s", sleepTime))
+			debugOutput("sleeping for %s", sleepTime)
 			time.Sleep(sleepTime)
 		}
 
@@ -160,7 +180,7 @@ func main() {
 				break
 			}
 			if _, ok := alredyChecked[p.Key]; ok {
-				debugOutput(fmt.Sprintf("skipping key %s as it was already checked", p.Key))
+				debugOutput("skipping key %s as it was already checked", p.Key)
 			} else {
 				err := p.fetch(ctx)
 				if err != nil {
@@ -175,7 +195,7 @@ func main() {
 		threshold := time.Now().Add(-10 * time.Minute)
 		for k, v := range alredyChecked {
 			if v.Before(threshold) {
-				debugOutput(fmt.Sprintf("deleting expired entry %s", k))
+				debugOutput("deleting expired entry %s", k)
 				delete(alredyChecked, k)
 			}
 		}
