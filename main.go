@@ -15,8 +15,6 @@ import (
 var (
 	debug = flag.Bool("debug", false, "Print debug output")
 
-	alredyChecked = make(map[string]time.Time)
-
 	r = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	keywordsRegex = make(map[string]keywordRegexType)
@@ -67,6 +65,8 @@ func main() {
 
 	chanError := make(chan error)
 	chanOutput := make(chan paste)
+
+	alredyChecked := make(map[string]time.Time)
 
 	var wgOutput sync.WaitGroup
 	var wgError sync.WaitGroup
@@ -136,6 +136,7 @@ func main() {
 			if _, ok := alredyChecked[p.Key]; ok {
 				debugOutput("skipping key %s as it was already checked", p.Key)
 			} else {
+				alredyChecked[p.Key] = time.Now()
 				p2, err := p.fetch(ctx)
 				if err != nil {
 					chanError <- fmt.Errorf("fetch: %v", err)

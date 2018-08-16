@@ -9,7 +9,6 @@ import (
 	"os"
 	"path"
 	"strings"
-	"time"
 
 	gomail "gopkg.in/gomail.v2"
 )
@@ -111,7 +110,6 @@ func (p *paste) sendPasteMessage(config *configuration) (err error) {
 
 func (p paste) fetch(ctx context.Context) (*paste, error) {
 	debugOutput("checking paste %s", p.Key)
-	alredyChecked[p.Key] = time.Now()
 	resp, err := httpRequest(ctx, p.ScrapeURL)
 	if err != nil {
 		return nil, err
