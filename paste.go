@@ -65,7 +65,7 @@ func (p *paste) String() string {
 	return buf.String()
 }
 
-func (p *paste) sendPasteMessage() (err error) {
+func (p *paste) sendPasteMessage(config *configuration) (err error) {
 	m := gomail.NewMessage()
 	m.SetHeader("From", config.Mailfrom)
 	m.SetHeader("To", config.Mailto)
@@ -105,7 +105,7 @@ func (p *paste) sendPasteMessage() (err error) {
 	m.Attach(fullPath)
 
 	m.SetBody("text/plain", p.String())
-	err = sendEmail(m)
+	err = sendEmail(config, m)
 	return err
 }
 
@@ -152,7 +152,6 @@ func fetchPasteList(ctx context.Context) ([]paste, error) {
 		panic("You do not have access to the scrape API from this IP address!")
 	}
 
-	lastCheck = time.Now()
 	jsonErr := json.Unmarshal([]byte(body), &list)
 	if jsonErr != nil {
 		return list, fmt.Errorf("error on parsing json: %v. json: %s", jsonErr, body)

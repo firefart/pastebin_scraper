@@ -1,5 +1,12 @@
 package main
 
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+)
+
 type configuration struct {
 	Mailserver  string    `json:"mailserver"`
 	Mailport    int       `json:"mailport"`
@@ -14,4 +21,23 @@ type configuration struct {
 type keyword struct {
 	Keyword    string   `json:"keyword"`
 	Exceptions []string `json:"exceptions"`
+}
+
+func getConfig(f string) (*configuration, error) {
+	if f == "" {
+		return nil, fmt.Errorf("please provide a valid config file")
+	}
+
+	b, err := ioutil.ReadFile(f)
+	if err != nil {
+		return nil, err
+	}
+	reader := bytes.NewReader(b)
+
+	decoder := json.NewDecoder(reader)
+	c := configuration{}
+	if err = decoder.Decode(&c); err != nil {
+		return nil, err
+	}
+	return &c, nil
 }

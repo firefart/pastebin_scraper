@@ -2,14 +2,10 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"math/rand"
-	"net/http"
-	"os"
-	"os/signal"
 	"regexp"
 	"strings"
 	"sync"
@@ -17,22 +13,12 @@ import (
 )
 
 var (
-	debug      = flag.Bool("debug", false, "Print debug output")
-	configFile = flag.String("config", "", "Config File to use")
+	debug = flag.Bool("debug", false, "Print debug output")
 
-	config configuration
-
-	lastCheck     time.Time
-	terminate     = false
 	alredyChecked = make(map[string]time.Time)
-
-	client = &http.Client{
-		Timeout: 10 * time.Second,
-	}
 
 	chanError  = make(chan error)
 	chanOutput = make(chan paste)
-	chanSignal = make(chan os.Signal)
 
 	wgOutput sync.WaitGroup
 	wgError  sync.WaitGroup
@@ -82,45 +68,18 @@ func checkExceptions(s string, exceptions []string) bool {
 
 // nolint: gocyclo
 func main() {
+	configFile := flag.String("config", "", "Config File to use")
+	var lastCheck time.Time
 	flag.Parse()
 
-	if *configFile == "" {
-		log.Fatalln("Please provide a valid config file")
-	}
-
-	file, err := os.Open(*configFile)
-	if err != nil {
-		log.Fatalf("Error opening config file: %v", err)
-	}
-
-	defer func() {
-		rerr := file.Close()
-		if rerr != nil {
-			log.Fatalf("Error closing config file: %v", rerr)
-		}
-	}()
-
-	decoder := json.NewDecoder(file)
-	config = configuration{}
-	err = decoder.Decode(&config)
-	if err != nil {
-		log.Fatalf("Error parsing config file: %v", err)
-	}
-
 	log.Println("Starting Pastebin Scraper")
+	config, err := getConfig(*configFile)
+	if err != nil {
+		log.Fatalf("could not read config file %s: %v", *configFile, err)
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
-	// Clean exit when pressing CTRL+C
-	signal.Notify(chanSignal, os.Interrupt)
-	go func() {
-		for range chanSignal {
-			fmt.Println("CTRL+C pressed")
-			terminate = true
-		}
-		cancel()
-	}()
 
 	wgOutput.Add(1)
 	wgError.Add(1)
@@ -129,7 +88,7 @@ func main() {
 		defer wgOutput.Done()
 		for p := range chanOutput {
 			debugOutput("found paste:\n%s", p)
-			err = p.sendPasteMessage()
+			err = p.sendPasteMessage(config)
 			if err != nil {
 				chanError <- fmt.Errorf("sendPasteMessage: %v", err)
 			}
@@ -141,7 +100,7 @@ func main() {
 		for err := range chanError {
 			log.Printf("%v", err)
 			if config.Mailonerror {
-				err2 := sendErrorMessage(err)
+				err2 := sendErrorMessage(config, err)
 				if err2 != nil {
 					log.Printf("ERROR on sending error mail: %v", err2)
 				}
@@ -159,10 +118,6 @@ func main() {
 	}
 
 	for {
-		if terminate {
-			break
-		}
-
 		// Only fetch the main list once a minute
 		sleepTime := time.Until(lastCheck.Add(1 * time.Minute))
 		if sleepTime > 0 {
@@ -174,11 +129,9 @@ func main() {
 		if err != nil {
 			chanError <- fmt.Errorf("fetchPasteList: %v", err)
 		}
+		lastCheck = time.Now()
 
 		for _, p := range pastes {
-			if terminate {
-				break
-			}
 			if _, ok := alredyChecked[p.Key]; ok {
 				debugOutput("skipping key %s as it was already checked", p.Key)
 			} else {

@@ -5,10 +5,17 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"time"
 )
 
 const (
 	userAgent = "Pastebin Scraper (https://firefart.at)"
+)
+
+var (
+	client = &http.Client{
+		Timeout: 10 * time.Second,
+	}
 )
 
 func httpRequest(ctx context.Context, url string) (*http.Response, error) {
