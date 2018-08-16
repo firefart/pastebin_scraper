@@ -17,12 +17,13 @@ make
 ```
 or
 ```bash
-go get gopkg.in/gomail.v2
+go get -u gopkg.in/gomail.v2
 go build
 ```
-or get downloadlink from [https://github.com/FireFart/pastebin_scraper/releases/](https://github.com/FireFart/pastebin_scraper/releases/) and download
+or
 ```
-wget https://github.com/FireFart/pastebin_scraper/archive/....
+make_linux.bat
+make_windows.bat
 ```
 
 * Add a user to run the binary
