@@ -14,18 +14,18 @@ func randomString(strlen int) string {
 	return string(result)
 }
 
-func createZip(filename string, content string) (zipContent []byte, err error) {
+func createZip(filename string, content string) ([]byte, error) {
 	buf := new(bytes.Buffer)
 	w := zip.NewWriter(buf)
 	f, err := w.Create(filename)
 	if err != nil {
-		return
+		return nil, err
 	}
 	if _, err = f.Write([]byte(content)); err != nil {
-		return
+		return nil, err
 	}
 	if err = w.Close(); err != nil {
-		return
+		return nil, err
 	}
 	return buf.Bytes(), nil
 }
