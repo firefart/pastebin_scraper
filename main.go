@@ -17,12 +17,6 @@ var (
 
 	alredyChecked = make(map[string]time.Time)
 
-	chanError  = make(chan error)
-	chanOutput = make(chan paste)
-
-	wgOutput sync.WaitGroup
-	wgError  sync.WaitGroup
-
 	r = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	keywordsRegex = make(map[string]keywordRegexType)
@@ -70,6 +64,13 @@ func checkExceptions(s string, exceptions []string) bool {
 func main() {
 	configFile := flag.String("config", "", "Config File to use")
 	var lastCheck time.Time
+
+	chanError := make(chan error)
+	chanOutput := make(chan paste)
+
+	var wgOutput sync.WaitGroup
+	var wgError sync.WaitGroup
+
 	flag.Parse()
 
 	log.Println("Starting Pastebin Scraper")
@@ -135,9 +136,11 @@ func main() {
 			if _, ok := alredyChecked[p.Key]; ok {
 				debugOutput("skipping key %s as it was already checked", p.Key)
 			} else {
-				err := p.fetch(ctx)
+				p2, err := p.fetch(ctx)
 				if err != nil {
 					chanError <- fmt.Errorf("fetch: %v", err)
+				} else if p2 != nil {
+					chanOutput <- *p2
 				}
 				// do not hammer the API
 				time.Sleep(1 * time.Second)

@@ -109,30 +109,31 @@ func (p *paste) sendPasteMessage(config *configuration) (err error) {
 	return err
 }
 
-func (p paste) fetch(ctx context.Context) error {
+func (p paste) fetch(ctx context.Context) (*paste, error) {
 	debugOutput("checking paste %s", p.Key)
 	alredyChecked[p.Key] = time.Now()
 	resp, err := httpRequest(ctx, p.ScrapeURL)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if resp.StatusCode == http.StatusOK || resp.ContentLength > 0 {
 		b, err := httpRespBodyToString(resp)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		found, key := checkKeywords(b)
 		if found {
 			p.Content = b
 			p.MatchedKeywords = key
-			chanOutput <- p
+			return &p, nil
 		}
 	} else {
 		b, err := httpRespBodyToString(resp)
-		return fmt.Errorf("Output: %s, Error: %v", b, err)
+		return nil, fmt.Errorf("Output: %s, Error: %v", b, err)
 	}
-	return nil
+	// nothing found
+	return nil, nil
 }
 
 func fetchPasteList(ctx context.Context) ([]paste, error) {
