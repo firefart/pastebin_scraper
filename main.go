@@ -8,7 +8,6 @@ import (
 	"math/rand"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -65,11 +64,11 @@ func main() {
 
 	chanError := make(chan error)
 	chanOutput := make(chan paste)
+	// we run in an endless loop so no need for a waitgroup here
+	defer close(chanOutput)
+	defer close(chanError)
 
 	alredyChecked := make(map[string]time.Time)
-
-	var wgOutput sync.WaitGroup
-	var wgError sync.WaitGroup
 
 	flag.Parse()
 
@@ -82,11 +81,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	wgOutput.Add(1)
-	wgError.Add(1)
-
 	go func() {
-		defer wgOutput.Done()
 		for p := range chanOutput {
 			debugOutput("found paste:\n%s", p)
 			err = p.sendPasteMessage(config)
@@ -97,7 +92,6 @@ func main() {
 	}()
 
 	go func() {
-		defer wgError.Done()
 		for err := range chanError {
 			log.Printf("%v", err)
 			if config.Mailonerror {
@@ -157,9 +151,4 @@ func main() {
 			}
 		}
 	}
-
-	close(chanOutput)
-	wgOutput.Wait()
-	close(chanError)
-	wgError.Wait()
 }
