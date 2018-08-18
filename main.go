@@ -15,8 +15,6 @@ var (
 	debug = flag.Bool("debug", false, "Print debug output")
 
 	r = rand.New(rand.NewSource(time.Now().UnixNano()))
-
-	keywordsRegex = make(map[string]keywordRegexType)
 )
 
 type keywordRegexType struct {
@@ -30,10 +28,10 @@ func debugOutput(s string, a ...interface{}) {
 	}
 }
 
-func checkKeywords(body string) (bool, map[string]string) {
+func checkKeywords(body string, keywords *map[string]keywordRegexType) (bool, map[string]string) {
 	found := make(map[string]string)
 	status := false
-	for k, v := range keywordsRegex {
+	for k, v := range *keywords {
 		if v.regexp != nil {
 			if s := v.regexp.FindStringSubmatch(body); s != nil {
 				match := strings.TrimSpace(s[1])
@@ -57,6 +55,19 @@ func checkExceptions(s string, exceptions []string) bool {
 	return false
 }
 
+func parseKeywords(k []keyword) *map[string]keywordRegexType {
+	keywordsRegex := make(map[string]keywordRegexType)
+	// use a boundary for keyword searching
+	for _, k := range k {
+		r := fmt.Sprintf(`(?im)^(.*\b%s.*)$`, regexp.QuoteMeta(k.Keyword))
+		keywordsRegex[k.Keyword] = keywordRegexType{
+			regexp:     regexp.MustCompile(r),
+			exceptions: k.Exceptions,
+		}
+	}
+	return &keywordsRegex
+}
+
 // nolint: gocyclo
 func main() {
 	configFile := flag.String("config", "", "Config File to use")
@@ -78,39 +89,32 @@ func main() {
 		log.Fatalf("could not read config file %s: %v", *configFile, err)
 	}
 
+	keywordsRegex := parseKeywords(config.Keywords)
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go func() {
+	go func(c *configuration) {
 		for p := range chanOutput {
 			debugOutput("found paste:\n%s", p)
-			err = p.sendPasteMessage(config)
+			err = p.sendPasteMessage(c)
 			if err != nil {
 				chanError <- fmt.Errorf("sendPasteMessage: %v", err)
 			}
 		}
-	}()
+	}(config)
 
-	go func() {
+	go func(c *configuration) {
 		for err := range chanError {
 			log.Printf("%v", err)
-			if config.Mailonerror {
-				err2 := sendErrorMessage(config, err)
+			if c.Mailonerror {
+				err2 := sendErrorMessage(c, err)
 				if err2 != nil {
 					log.Printf("ERROR on sending error mail: %v", err2)
 				}
 			}
 		}
-	}()
-
-	// use a boundary for keyword searching
-	for _, k := range config.Keywords {
-		r := fmt.Sprintf(`(?im)^(.*\b%s.*)$`, regexp.QuoteMeta(k.Keyword))
-		keywordsRegex[k.Keyword] = keywordRegexType{
-			regexp:     regexp.MustCompile(r),
-			exceptions: k.Exceptions,
-		}
-	}
+	}(config)
 
 	for {
 		// Only fetch the main list once a minute
@@ -131,7 +135,7 @@ func main() {
 				debugOutput("skipping key %s as it was already checked", p.Key)
 			} else {
 				alredyChecked[p.Key] = time.Now()
-				p2, err := p.fetch(ctx)
+				p2, err := p.fetch(ctx, keywordsRegex)
 				if err != nil {
 					chanError <- fmt.Errorf("fetch: %v", err)
 				} else if p2 != nil {

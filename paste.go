@@ -108,7 +108,7 @@ func (p *paste) sendPasteMessage(config *configuration) (err error) {
 	return err
 }
 
-func (p paste) fetch(ctx context.Context) (*paste, error) {
+func (p paste) fetch(ctx context.Context, keywords *map[string]keywordRegexType) (*paste, error) {
 	debugOutput("checking paste %s", p.Key)
 	resp, err := httpRequest(ctx, p.ScrapeURL)
 	if err != nil {
@@ -120,7 +120,7 @@ func (p paste) fetch(ctx context.Context) (*paste, error) {
 		if err != nil {
 			return nil, err
 		}
-		found, key := checkKeywords(b)
+		found, key := checkKeywords(b, keywords)
 		if found {
 			p.Content = b
 			p.MatchedKeywords = key
