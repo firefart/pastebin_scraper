@@ -3,6 +3,9 @@ package main
 import (
 	"archive/zip"
 	"bytes"
+	"fmt"
+	"strconv"
+	"time"
 )
 
 func randomString(strlen int) string {
@@ -36,4 +39,15 @@ func getKeysFromMap(in map[string]string) []string {
 		keys = append(keys, k)
 	}
 	return keys
+}
+
+func dateToString(in string) string {
+	i, err := strconv.ParseInt(in, 10, 64)
+	if err != nil {
+		return fmt.Sprintf("could not parse date %q: %v", in, err)
+	}
+	if i == 0 {
+		return ""
+	}
+	return time.Unix(i, 0).Local().Format(time.ANSIC)
 }

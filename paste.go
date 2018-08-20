@@ -47,9 +47,9 @@ func (p *paste) String() string {
 		{"Title", p.Title},
 		{"URL", p.FullURL},
 		{"User", p.User},
-		{"Date", p.Date},
+		{"Date", dateToString(p.Date)},
 		{"Size", p.Size},
-		{"Expire", p.Expire},
+		{"Expire", dateToString(p.Expire)},
 		{"Syntax", p.Syntax},
 	}
 
