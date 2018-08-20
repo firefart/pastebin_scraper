@@ -64,7 +64,7 @@ func (p *paste) String() string {
 	return buf.String()
 }
 
-func (p *paste) sendPasteMessage(config *configuration) (err error) {
+func (p *paste) sendPasteMessage(config configuration) (err error) {
 	m := gomail.NewMessage()
 	m.SetHeader("From", config.Mailfrom)
 	m.SetHeader("To", config.Mailto)

@@ -7,14 +7,14 @@ import (
 	gomail "gopkg.in/gomail.v2"
 )
 
-func sendEmail(config *configuration, m *gomail.Message) error {
+func sendEmail(config configuration, m *gomail.Message) error {
 	debugOutput("sending mail")
 	d := gomail.Dialer{Host: config.Mailserver, Port: config.Mailport}
 	d.TLSConfig = &tls.Config{InsecureSkipVerify: true} // nolint: gas
 	err := d.DialAndSend(m)
 	return err
 }
-func sendErrorMessage(config *configuration, errorMessage error) error {
+func sendErrorMessage(config configuration, errorMessage error) error {
 	debugOutput("sending error mail")
 	m := gomail.NewMessage()
 	m.SetHeader("From", config.Mailfrom)

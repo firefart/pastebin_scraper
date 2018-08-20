@@ -94,7 +94,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go func(c *configuration) {
+	go func(c configuration) {
 		for p := range chanOutput {
 			debugOutput("found paste:\n%s", p)
 			err = p.sendPasteMessage(c)
@@ -102,9 +102,9 @@ func main() {
 				chanError <- fmt.Errorf("sendPasteMessage: %v", err)
 			}
 		}
-	}(config)
+	}(*config)
 
-	go func(c *configuration) {
+	go func(c configuration) {
 		for err := range chanError {
 			log.Printf("%v", err)
 			if c.Mailonerror {
@@ -114,7 +114,7 @@ func main() {
 				}
 			}
 		}
-	}(config)
+	}(*config)
 
 	for {
 		// Only fetch the main list once a minute
