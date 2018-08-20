@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -9,6 +10,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"text/tabwriter"
 
 	gomail "gopkg.in/gomail.v2"
 )
@@ -32,36 +34,47 @@ type paste struct {
 }
 
 func (p *paste) String() string {
-	keywords := strings.Join(getKeysFromMap(p.MatchedKeywords), ",")
-	buf := &bytes.Buffer{}
-	fmt.Fprintf(buf, "Pastebin Alert for Keywords %s\n\n", keywords)
-	if p.Title != "" {
-		fmt.Fprintf(buf, "Title: %s\n", p.Title)
+	var buffer bytes.Buffer
+	bw := bufio.NewWriter(&buffer)
+	tw := tabwriter.NewWriter(bw, 0, 5, 3, ' ', 0)
+	keywords := strings.Join(getKeysFromMap(p.MatchedKeywords), ", ")
+	fmt.Fprintf(tw, "Pastebin Alert for Keywords %s\n\n", keywords)
+
+	fields := []struct {
+		prefix  string
+		content string
+	}{
+		{"Title", p.Title},
+		{"URL", p.FullURL},
+		{"User", p.User},
+		{"Date", p.Date},
+		{"Size", p.Size},
+		{"Expire", p.Expire},
+		{"Syntax", p.Syntax},
 	}
-	if p.FullURL != "" {
-		fmt.Fprintf(buf, "URL: %s\n", p.FullURL)
+
+	for _, x := range fields {
+		if x.content != "" {
+			if _, err := fmt.Fprintf(tw, "%s:\t%s\n", x.prefix, x.content); err != nil {
+				return fmt.Sprintf("error on tostring: %v", err)
+			}
+		}
 	}
-	if p.User != "" {
-		fmt.Fprintf(buf, "User: %s\n", p.User)
-	}
-	if p.Date != "" {
-		fmt.Fprintf(buf, "Date: %s\n", p.Date)
-	}
-	if p.Size != "" {
-		fmt.Fprintf(buf, "Size: %s\n", p.Size)
-	}
-	if p.Expire != "" {
-		fmt.Fprintf(buf, "Expire: %s\n", p.Expire)
-	}
-	if p.Syntax != "" {
-		fmt.Fprintf(buf, "Syntax: %s\n", p.Syntax)
+
+	if err := tw.Flush(); err != nil {
+		return fmt.Sprintf("error on tostring: %v", err)
 	}
 
 	for k, v := range p.MatchedKeywords {
-		fmt.Fprintf(buf, "\nFirst match of Keyword: %s\n%s", k, v)
+		if _, err := fmt.Fprintf(bw, "\nFirst match of Keyword: %s\n%s\n", k, v); err != nil {
+			return fmt.Sprintf("error on tostring: %v", err)
+		}
 	}
 
-	return buf.String()
+	if err := bw.Flush(); err != nil {
+		return fmt.Sprintf("error on tostring: %v", err)
+	}
+	return buffer.String()
 }
 
 func (p *paste) sendPasteMessage(config configuration) (err error) {
