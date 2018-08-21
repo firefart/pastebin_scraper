@@ -1,6 +1,4 @@
 GOPATH := $(or $(GOPATH), $(HOME)/go)
-BIN_DIR := $(GOPATH)/bin
-GOMETALINTER := $(BIN_DIR)/gometalinter
 
 .DEFAULT_GOAL := build
 
@@ -16,10 +14,7 @@ test: deps lint
 deps:
 	go get -u gopkg.in/gomail.v2
 
-$(GOMETALINTER):
-	go get -u github.com/alecthomas/gometalinter
-	$(GOMETALINTER) --install
-
 .PHONY: lint
-lint: deps $(GOMETALINTER)
-	$(BIN_DIR)/gometalinter ./...
+lint: deps
+	go get -u github.com/alecthomas/gometalinter
+	gometalinter --deadline=5m  ./...
