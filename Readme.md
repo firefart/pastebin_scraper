@@ -1,4 +1,6 @@
 # Pastebin Scraper
+[![Build Status](https://travis-ci.org/FireFart/pastebin_scraper.svg?branch=master)](https://travis-ci.org/FireFart/pastebin_scraper)
+
 Constantly monitors the Pastebin scrape API and sends E-Mails when a keyword matches. This program needs a paid [Pastebin PRO account](https://pastebin.com/pro).
 You need to put the IP you are scraping from into the [Pastebin admin panel](https://pastebin.com/api_scraping_faq).
 
