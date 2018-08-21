@@ -28,7 +28,7 @@ func getConfig(f string) (*configuration, error) {
 		return nil, fmt.Errorf("please provide a valid config file")
 	}
 
-	b, err := ioutil.ReadFile(f)
+	b, err := ioutil.ReadFile(f) // nolint: gosec
 	if err != nil {
 		return nil, err
 	}

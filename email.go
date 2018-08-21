@@ -10,7 +10,7 @@ import (
 func sendEmail(config configuration, m *gomail.Message) error {
 	debugOutput("sending mail")
 	d := gomail.Dialer{Host: config.Mailserver, Port: config.Mailport}
-	d.TLSConfig = &tls.Config{InsecureSkipVerify: true} // nolint: gas
+	d.TLSConfig = &tls.Config{InsecureSkipVerify: true} // nolint: gosec
 	err := d.DialAndSend(m)
 	return err
 }

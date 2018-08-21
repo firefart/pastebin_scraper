@@ -38,7 +38,9 @@ func (p *paste) String() string {
 	bw := bufio.NewWriter(&buffer)
 	tw := tabwriter.NewWriter(bw, 0, 5, 3, ' ', 0)
 	keywords := strings.Join(getKeysFromMap(p.MatchedKeywords), ", ")
-	fmt.Fprintf(tw, "Pastebin Alert for Keywords %s\n\n", keywords)
+	if _, err := fmt.Fprintf(tw, "Pastebin Alert for Keywords %s\n\n", keywords); err != nil {
+		return fmt.Sprintf("error on tostring: %v", err)
+	}
 
 	fields := []struct {
 		prefix  string
