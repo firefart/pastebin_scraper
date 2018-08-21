@@ -6,7 +6,7 @@ echo Running gometalinter
 gometalinter ./...
 
 echo Running Tests
-go test -v
+go test -v ./...
 
 echo Running build
 set GOOS=linux
