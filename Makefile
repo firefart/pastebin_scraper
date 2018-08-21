@@ -17,4 +17,5 @@ deps:
 .PHONY: lint
 lint: deps
 	go get -u github.com/alecthomas/gometalinter
+	gometalinter --install
 	gometalinter --deadline=5m  ./...
