@@ -5,7 +5,7 @@ GOMETALINTER := $(BIN_DIR)/gometalinter
 .DEFAULT_GOAL := build
 
 .PHONY: build
-build: protoc deps test
+build: deps test
 	go build .
 
 .PHONY: test
@@ -23,7 +23,3 @@ $(GOMETALINTER):
 .PHONY: lint
 lint: deps $(GOMETALINTER)
 	$(BIN_DIR)/gometalinter ./...
-
-.PHONY: protoc
-protoc: deps
-	protoc --go_out=. rss/rss.proto
