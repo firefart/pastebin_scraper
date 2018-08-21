@@ -18,7 +18,7 @@ deps:
 
 $(GOMETALINTER):
 	go get -u github.com/alecthomas/gometalinter
-	$(GOMETALINTER) --install &> /dev/null
+	$(GOMETALINTER) --install
 
 .PHONY: lint
 lint: deps $(GOMETALINTER)
