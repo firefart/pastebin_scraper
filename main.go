@@ -13,6 +13,7 @@ import (
 
 var (
 	debug = flag.Bool("debug", false, "Print debug output")
+	test  = flag.Bool("test", false, "do not send mails, print them instead")
 
 	r = rand.New(rand.NewSource(time.Now().UnixNano()))
 )
