@@ -1,4 +1,5 @@
 @echo off
+SET BUILDARGS=-ldflags="-s -w" -gcflags="all=-trimpath=%GOPATH%\src" -asmflags="all=-trimpath=%GOPATH%\src"
 
 echo Updating Dependencies
 go get -u gopkg.in/gomail.v2
@@ -8,10 +9,10 @@ go get -u github.com/alecthomas/gometalinter
 gometalinter --install > nul
 gometalinter ./...
 
-echo Running tests
-go test -v -race ./...
+echo Running Tests
+go test -v ./...
 
-echo Building program
+echo Running build
 set GOOS=windows
 set GOARCH=amd64
-go build -o pastebin_scraper.exe
+go build %BUILDARGS% -o pastebin_scraper.exe
