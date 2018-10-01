@@ -91,6 +91,11 @@ func main() {
 	}
 
 	keywordsRegex := parseKeywords(config.Keywords)
+	timeout, err := time.ParseDuration(config.Timeout)
+	if err != nil {
+		log.Fatalf("invalid value for timeout: %q - %v", config.Timeout, err)
+	}
+	client.Timeout = timeout
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -125,11 +130,12 @@ func main() {
 			time.Sleep(sleepTime)
 		}
 
+		lastCheck = time.Now()
 		pastes, err := fetchPasteList(ctx)
 		if err != nil {
 			chanError <- fmt.Errorf("fetchPasteList: %v", err)
+			continue
 		}
-		lastCheck = time.Now()
 
 		for _, p := range pastes {
 			if _, ok := alredyChecked[p.Key]; ok {

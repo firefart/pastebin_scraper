@@ -14,6 +14,7 @@ const (
 
 var (
 	client = &http.Client{
+		// default timeout
 		Timeout: 10 * time.Second,
 	}
 )

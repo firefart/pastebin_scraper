@@ -15,6 +15,7 @@ type configuration struct {
 	Mailtoerror string    `json:"mailtoerror"`
 	Mailto      string    `json:"mailto"`
 	Mailsubject string    `json:"mailsubject"`
+	Timeout     string    `json:"timeout"`
 	Keywords    []keyword `json:"keywords"`
 }
 

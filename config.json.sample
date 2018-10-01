@@ -5,6 +5,7 @@
   "mailto": "Unknown Person <xxx@xxx.com>",
   "mailonerror": true,
   "mailtoerror": "error@xxx.xom",
+  "timeout": "10s",
   "keywords": [
     {"keyword": "keyword1", "exceptions": ["exception1", "exception2", "exception3"]},
     {"keyword": "keyword2", "exceptions": ["exception1", "exception2", "exception3"]},

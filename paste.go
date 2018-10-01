@@ -163,7 +163,7 @@ func fetchPasteList(ctx context.Context) ([]paste, error) {
 		return list, err
 	}
 	if strings.Contains(body, "DOES NOT HAVE ACCESS") {
-		panic("You do not have access to the scrape API from this IP address!")
+		panic(body)
 	}
 
 	jsonErr := json.Unmarshal([]byte(body), &list)
