@@ -127,7 +127,8 @@ func (p paste) fetch(ctx context.Context, keywords *map[string]keywordRegexType)
 	debugOutput("checking paste %s", p.Key)
 	resp, err := httpRequest(ctx, p.ScrapeURL)
 	if err != nil {
-		return nil, err
+		// Ignore HTTP based errors like timeout and connection reset
+		return nil, nil
 	}
 
 	if resp.StatusCode == http.StatusOK || resp.ContentLength > 0 {
@@ -155,7 +156,8 @@ func fetchPasteList(ctx context.Context) ([]paste, error) {
 	url := fmt.Sprintf("%s?limit=100", apiEndpoint)
 	resp, err := httpRequest(ctx, url)
 	if err != nil {
-		return list, err
+		// Ignore HTTP based errors like timeout and connection reset
+		return list, nil
 	}
 
 	body, err := httpRespBodyToString(resp)
