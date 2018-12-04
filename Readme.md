@@ -50,13 +50,14 @@ cp -R checkout_dir /home/pastebin/
 * Edit the config
 
 ```bash
-cp /home/rss/config.json.sample /home/rss/config.json
-vim /home/rss/config.json
+cp /home/pastebin/config.json.sample /home/pastebin/config.json
+vim /home/pastebin/config.json
 ```
 
 * Install the service
 
 ```bash
+cd /home/pastebin
 ./install_service.sh
 ```
 
