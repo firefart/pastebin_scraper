@@ -2,5 +2,8 @@ language: go
 go:
   - master
 
+env:
+  - GO111MODULE=on
+
 git:
   depth: 1
