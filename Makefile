@@ -7,7 +7,7 @@ build: deps test
 	go build .
 
 .PHONY: test
-test: deps lint
+test: deps
 	go test -v -race ./...
 
 .PHONY: deps
