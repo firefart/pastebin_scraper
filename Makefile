@@ -12,7 +12,8 @@ test: deps lint
 
 .PHONY: deps
 deps:
-	go get -u gopkg.in/gomail.v2
+	go get -u
+	go mod tidy -v
 
 .PHONY: lint
 lint: deps
