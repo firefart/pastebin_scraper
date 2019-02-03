@@ -1,5 +1,10 @@
 @echo off
-SET BUILDARGS=-ldflags="-s -w" -gcflags="all=-trimpath=%GOPATH%\src" -asmflags="all=-trimpath=%GOPATH%\src"
+rem current directory
+set CURDIR=%~dp0
+rem remove last / so build does not error out
+set CURDIR=%CURDIR:~0,-1%
+
+SET BUILDARGS=-ldflags="-s -w" -gcflags="all=-trimpath=%CURDIR%" -asmflags="all=-trimpath=%CURDIR%"
 
 echo [*] Updating Dependencies
 go get -u
