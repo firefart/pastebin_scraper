@@ -7,3 +7,5 @@ env:
 
 git:
   depth: 1
+
+script: make lint test
