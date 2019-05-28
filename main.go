@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"net"
 	"regexp"
 	"strings"
 	"time"
@@ -18,9 +19,11 @@ var (
 	r = rand.New(rand.NewSource(time.Now().UnixNano()))
 )
 
-type keywordRegexType struct {
-	regexp     *regexp.Regexp
-	exceptions []string
+type keywordType struct {
+	regexp      *regexp.Regexp
+	keywordType string
+	ipNet       *net.IPNet
+	exceptions  []string
 }
 
 func debugOutput(s string, a ...interface{}) {
@@ -29,16 +32,31 @@ func debugOutput(s string, a ...interface{}) {
 	}
 }
 
-func checkKeywords(body string, keywords *map[string]keywordRegexType) (bool, map[string]string) {
+func checkKeywords(body string, keywords *map[string]keywordType) (bool, map[string]string) {
 	found := make(map[string]string)
 	status := false
 	for k, v := range *keywords {
 		if v.regexp != nil {
 			if s := v.regexp.FindStringSubmatch(body); s != nil {
 				match := strings.TrimSpace(s[1])
-				if !checkExceptions(match, v.exceptions) {
-					found[k] = match
-					status = true
+				switch v.keywordType {
+				case "ip":
+					ip := net.ParseIP(match)
+					// invalid IP matched
+					if ip == nil {
+						debugOutput("%q is not a valid ip", match)
+						continue
+					}
+					if v.ipNet.Contains(ip) {
+						debugOutput("%v contains %s", v.ipNet, ip)
+						found[k] = match
+						status = true
+					}
+				default:
+					if !checkExceptions(match, v.exceptions) {
+						found[k] = match
+						status = true
+					}
 				}
 			}
 		}
@@ -56,17 +74,35 @@ func checkExceptions(s string, exceptions []string) bool {
 	return false
 }
 
-func parseKeywords(k []keyword) *map[string]keywordRegexType {
-	keywordsRegex := make(map[string]keywordRegexType)
+func parseKeywords(k []keyword) (*map[string]keywordType, error) {
+	keywords := make(map[string]keywordType)
 	// use a boundary for keyword searching
 	for _, k := range k {
-		r := fmt.Sprintf(`(?im)^(.*\b%s.*)$`, regexp.QuoteMeta(k.Keyword))
-		keywordsRegex[k.Keyword] = keywordRegexType{
-			regexp:     regexp.MustCompile(r),
-			exceptions: k.Exceptions,
+		switch k.Type {
+		case "cidr":
+			// capture IPs (only v4)
+			// https://www.regular-expressions.info/ip.html
+			r := `(\b(?:\d{1,3}\.){3}\d{1,3}\b)`
+			_, n, err := net.ParseCIDR(k.Keyword)
+			if err != nil {
+				return nil, fmt.Errorf("could not parse cidr %s: %v", k.Keyword, err)
+			}
+			keywords[k.Keyword] = keywordType{
+				regexp:      regexp.MustCompile(r),
+				keywordType: "ip",
+				ipNet:       n,
+				exceptions:  k.Exceptions,
+			}
+		default:
+			r := fmt.Sprintf(`(?im)^(.*\b%s.*)$`, regexp.QuoteMeta(k.Keyword))
+			keywords[k.Keyword] = keywordType{
+				regexp:      regexp.MustCompile(r),
+				keywordType: "string",
+				exceptions:  k.Exceptions,
+			}
 		}
 	}
-	return &keywordsRegex
+	return &keywords, nil
 }
 
 // nolint: gocyclo
@@ -90,7 +126,10 @@ func main() {
 		log.Fatalf("could not read config file %s: %v", *configFile, err)
 	}
 
-	keywordsRegex := parseKeywords(config.Keywords)
+	keywords, err := parseKeywords(config.Keywords)
+	if err != nil {
+		log.Fatalf("could not parse keywords: %v", err)
+	}
 	timeout, err := time.ParseDuration(config.Timeout)
 	if err != nil {
 		log.Fatalf("invalid value for timeout: %q - %v", config.Timeout, err)
@@ -142,7 +181,7 @@ func main() {
 				debugOutput("skipping key %s as it was already checked", p.Key)
 			} else {
 				alredyChecked[p.Key] = time.Now()
-				p2, err := p.fetch(ctx, keywordsRegex)
+				p2, err := p.fetch(ctx, keywords)
 				if err != nil {
 					chanError <- fmt.Errorf("fetch: %v", err)
 				} else if p2 != nil {

@@ -9,6 +9,7 @@
   "keywords": [
     {"keyword": "keyword1", "exceptions": ["exception1", "exception2", "exception3"]},
     {"keyword": "keyword2", "exceptions": ["exception1", "exception2", "exception3"]},
-    {"keyword": "keyword3", "exceptions": ["exception1", "exception2", "exception3"]}
+    {"keyword": "keyword3", "exceptions": ["exception1", "exception2", "exception3"]},
+    {"keyword": "10.0.0.0/8", "type": "cidr"}
   ]
 }

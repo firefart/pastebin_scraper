@@ -123,7 +123,7 @@ func (p *paste) sendPasteMessage(config configuration) (err error) {
 	return err
 }
 
-func (p paste) fetch(ctx context.Context, keywords *map[string]keywordRegexType) (*paste, error) {
+func (p paste) fetch(ctx context.Context, keywords *map[string]keywordType) (*paste, error) {
 	debugOutput("checking paste %s", p.Key)
 	resp, err := httpRequest(ctx, p.ScrapeURL)
 	if err != nil {

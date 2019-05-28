@@ -22,6 +22,7 @@ type configuration struct {
 type keyword struct {
 	Keyword    string   `json:"keyword"`
 	Exceptions []string `json:"exceptions"`
+	Type       string   `json:"type"`
 }
 
 func getConfig(f string) (*configuration, error) {

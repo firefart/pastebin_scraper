@@ -7,7 +7,7 @@ You need to put the IP you are scraping from into the [Pastebin admin panel](htt
 
 The sent email contains the Paste metadata, the first matched line per keyword and the zipped paste as an attachment.
 
-Keywords are set to match with a starting [regex boundary](https://www.regular-expressions.info/wordboundaries.html).
+Keywords are set to match with a starting [regex boundary](https://www.regular-expressions.info/wordboundaries.html). Matching of CIDRs is also supported (see config.json.sample).
 
 Expected errors during execution are also sent via E-Mail to the E-Mail address configured in `config.json`.
 
