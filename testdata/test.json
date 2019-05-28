@@ -6,8 +6,12 @@
   "mailonerror": true,
   "mailtoerror": "error@xxx.xom",
   "keywords": [
-    {"keyword": "keyword1", "type": "test", "exceptions": ["exception1", "exception2", "exception3"]},
+    {"keyword": "keyword1", "exceptions": ["exception1", "exception2", "exception3"]},
     {"keyword": "keyword2", "exceptions": ["exception1", "exception2", "exception3"]},
     {"keyword": "keyword3", "exceptions": ["exception1", "exception2", "exception3"]}
+  ],
+  "cidrs": [
+    "10.0.0.0/8",
+    "192.168.0.0/16"
   ]
 }

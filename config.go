@@ -17,12 +17,12 @@ type configuration struct {
 	Mailsubject string    `json:"mailsubject"`
 	Timeout     string    `json:"timeout"`
 	Keywords    []keyword `json:"keywords"`
+	CIDRs       []string  `json:"cidrs"`
 }
 
 type keyword struct {
 	Keyword    string   `json:"keyword"`
 	Exceptions []string `json:"exceptions"`
-	Type       string   `json:"type"`
 }
 
 func getConfig(f string) (*configuration, error) {

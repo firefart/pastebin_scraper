@@ -20,24 +20,24 @@ const (
 )
 
 type paste struct {
-	FullURL         string `json:"full_url"`
-	ScrapeURL       string `json:"scrape_url"`
-	Date            string `json:"date"`
-	Key             string `json:"key"`
-	Size            string `json:"size"`
-	Expire          string `json:"expire"`
-	Title           string `json:"title"`
-	Syntax          string `json:"syntax"`
-	User            string `json:"user"`
-	Content         string
-	MatchedKeywords map[string]string
+	FullURL   string `json:"full_url"`
+	ScrapeURL string `json:"scrape_url"`
+	Date      string `json:"date"`
+	Key       string `json:"key"`
+	Size      string `json:"size"`
+	Expire    string `json:"expire"`
+	Title     string `json:"title"`
+	Syntax    string `json:"syntax"`
+	User      string `json:"user"`
+	Content   string
+	Matches   map[string][]string
 }
 
 func (p *paste) String() string {
 	var buffer bytes.Buffer
 	bw := bufio.NewWriter(&buffer)
 	tw := tabwriter.NewWriter(bw, 0, 5, 3, ' ', 0)
-	keywords := strings.Join(getKeysFromMap(p.MatchedKeywords), ", ")
+	keywords := strings.Join(getKeysFromMap(p.Matches), ", ")
 	if _, err := fmt.Fprintf(tw, "Pastebin Alert for Keywords %s\n\n", keywords); err != nil {
 		return fmt.Sprintf("error on tostring: %v", err)
 	}
@@ -67,9 +67,14 @@ func (p *paste) String() string {
 		return fmt.Sprintf("error on tostring: %v", err)
 	}
 
-	for k, v := range p.MatchedKeywords {
-		if _, err := fmt.Fprintf(bw, "\nFirst match of Keyword: %s\n%s\n", k, v); err != nil {
+	for k, v := range p.Matches {
+		if _, err := fmt.Fprintf(bw, "\nMatches for %s:\n", k); err != nil {
 			return fmt.Sprintf("error on tostring: %v", err)
+		}
+		for _, m := range v {
+			if _, err := fmt.Fprintf(bw, "%s\n", m); err != nil {
+				return fmt.Sprintf("error on tostring: %v", err)
+			}
 		}
 	}
 
@@ -83,7 +88,7 @@ func (p *paste) sendPasteMessage(config configuration) (err error) {
 	m := gomail.NewMessage()
 	m.SetHeader("From", config.Mailfrom)
 	m.SetHeader("To", config.Mailto)
-	keywords := strings.Join(getKeysFromMap(p.MatchedKeywords), ",")
+	keywords := strings.Join(getKeysFromMap(p.Matches), ",")
 	m.SetHeader("Subject", fmt.Sprintf("Pastebin Alert for %s", keywords))
 
 	filename := fmt.Sprintf("%s.zip", randomString(10))
@@ -123,7 +128,7 @@ func (p *paste) sendPasteMessage(config configuration) (err error) {
 	return err
 }
 
-func (p paste) fetch(ctx context.Context, keywords *map[string]keywordType) (*paste, error) {
+func (p paste) fetch(ctx context.Context, keywords *map[string]keywordType, cidrs *[]cidrType) (*paste, error) {
 	debugOutput("checking paste %s", p.Key)
 	resp, err := httpRequest(ctx, p.ScrapeURL)
 	if err != nil {
@@ -137,9 +142,15 @@ func (p paste) fetch(ctx context.Context, keywords *map[string]keywordType) (*pa
 			return nil, err
 		}
 		found, key := checkKeywords(b, keywords)
-		if found {
+		found2, key2 := checkCIDRs(b, cidrs)
+		if found || found2 {
+			// merge key1 and key2
+			for k, v := range key2 {
+				key[k] = v
+			}
+
 			p.Content = b
-			p.MatchedKeywords = key
+			p.Matches = key
 			return &p, nil
 		}
 	} else {

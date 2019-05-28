@@ -17,13 +17,19 @@ var (
 	test  = flag.Bool("test", false, "do not send mails, print them instead")
 
 	r = rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	// capture IPs (only v4)
+	// https://www.regular-expressions.info/ip.html
+	regexIP = regexp.MustCompile(`(\b(?:\d{1,3}\.){3}\d{1,3}\b)`)
 )
 
 type keywordType struct {
-	regexp      *regexp.Regexp
-	keywordType string
-	ipNet       *net.IPNet
-	exceptions  []string
+	regexp     *regexp.Regexp
+	exceptions []string
+}
+
+type cidrType struct {
+	ipNet *net.IPNet
 }
 
 func debugOutput(s string, a ...interface{}) {
@@ -32,33 +38,56 @@ func debugOutput(s string, a ...interface{}) {
 	}
 }
 
-func checkKeywords(body string, keywords *map[string]keywordType) (bool, map[string]string) {
-	found := make(map[string]string)
+func checkKeywords(body string, keywords *map[string]keywordType) (bool, map[string][]string) {
+	found := make(map[string][]string)
 	status := false
 	for k, v := range *keywords {
-		if v.regexp != nil {
-			if s := v.regexp.FindStringSubmatch(body); s != nil {
-				match := strings.TrimSpace(s[1])
-				switch v.keywordType {
-				case "ip":
-					ip := net.ParseIP(match)
-					// invalid IP matched
-					if ip == nil {
-						debugOutput("%q is not a valid ip", match)
-						continue
-					}
-					if v.ipNet.Contains(ip) {
-						debugOutput("%v contains %s", v.ipNet, ip)
-						found[k] = match
-						status = true
-					}
-				default:
-					if !checkExceptions(match, v.exceptions) {
-						found[k] = match
-						status = true
-					}
+		var x []string
+		s := v.regexp.FindAllString(body, -1)
+		// we have a match
+		if len(s) > 0 {
+			// check for exceptions
+			for _, m := range s {
+				match := strings.TrimSpace(m)
+				if !checkExceptions(match, v.exceptions) {
+					x = append(x, match)
+					status = true
 				}
 			}
+		}
+		// append result if not in exceptions
+		if len(x) > 0 {
+			found[k] = x
+		}
+	}
+	return status, found
+}
+
+func checkCIDRs(body string, cidrs *[]cidrType) (bool, map[string][]string) {
+	found := make(map[string][]string)
+	status := false
+	for _, cidr := range *cidrs {
+		var x []string
+		s := regexIP.FindAllString(body, -1)
+		// we have a match
+		if len(s) > 0 {
+			for _, m := range s {
+				match := strings.TrimSpace(m)
+				ip := net.ParseIP(match)
+				// invalid IP matched
+				if ip == nil {
+					debugOutput("%q is not a valid ip", match)
+					continue
+				}
+				if cidr.ipNet.Contains(ip) {
+					debugOutput("%v contains %s", cidr.ipNet, ip)
+					x = append(x, match)
+					status = true
+				}
+			}
+		}
+		if len(x) > 0 {
+			found[cidr.ipNet.String()] = x
 		}
 	}
 	return status, found
@@ -74,35 +103,29 @@ func checkExceptions(s string, exceptions []string) bool {
 	return false
 }
 
-func parseKeywords(k []keyword) (*map[string]keywordType, error) {
+func parseKeywords(k []keyword) *map[string]keywordType {
 	keywords := make(map[string]keywordType)
-	// use a boundary for keyword searching
 	for _, k := range k {
-		switch k.Type {
-		case "cidr":
-			// capture IPs (only v4)
-			// https://www.regular-expressions.info/ip.html
-			r := `(\b(?:\d{1,3}\.){3}\d{1,3}\b)`
-			_, n, err := net.ParseCIDR(k.Keyword)
-			if err != nil {
-				return nil, fmt.Errorf("could not parse cidr %s: %v", k.Keyword, err)
-			}
-			keywords[k.Keyword] = keywordType{
-				regexp:      regexp.MustCompile(r),
-				keywordType: "ip",
-				ipNet:       n,
-				exceptions:  k.Exceptions,
-			}
-		default:
-			r := fmt.Sprintf(`(?im)^(.*\b%s.*)$`, regexp.QuoteMeta(k.Keyword))
-			keywords[k.Keyword] = keywordType{
-				regexp:      regexp.MustCompile(r),
-				keywordType: "string",
-				exceptions:  k.Exceptions,
-			}
+		// use a boundary for keyword searching
+		r := fmt.Sprintf(`(?im)^(.*\b%s.*)$`, regexp.QuoteMeta(k.Keyword))
+		keywords[k.Keyword] = keywordType{
+			regexp:     regexp.MustCompile(r),
+			exceptions: k.Exceptions,
 		}
 	}
-	return &keywords, nil
+	return &keywords
+}
+
+func parseCIDRs(cidrs []string) (*[]cidrType, error) {
+	var ret []cidrType
+	for _, c := range cidrs {
+		_, n, err := net.ParseCIDR(c)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse cidr %s: %v", c, err)
+		}
+		ret = append(ret, cidrType{ipNet: n})
+	}
+	return &ret, nil
 }
 
 // nolint: gocyclo
@@ -126,9 +149,10 @@ func main() {
 		log.Fatalf("could not read config file %s: %v", *configFile, err)
 	}
 
-	keywords, err := parseKeywords(config.Keywords)
+	keywords := parseKeywords(config.Keywords)
+	cidrs, err := parseCIDRs(config.CIDRs)
 	if err != nil {
-		log.Fatalf("could not parse keywords: %v", err)
+		log.Fatalf("could not parse cidrs: %v", err)
 	}
 	timeout, err := time.ParseDuration(config.Timeout)
 	if err != nil {
@@ -141,7 +165,7 @@ func main() {
 
 	go func(c configuration) {
 		for p := range chanOutput {
-			debugOutput("found paste:\n%s", p)
+			debugOutput("found paste:\n%+v", p)
 			err = p.sendPasteMessage(c)
 			if err != nil {
 				chanError <- fmt.Errorf("sendPasteMessage: %v", err)
@@ -181,7 +205,7 @@ func main() {
 				debugOutput("skipping key %s as it was already checked", p.Key)
 			} else {
 				alredyChecked[p.Key] = time.Now()
-				p2, err := p.fetch(ctx, keywords)
+				p2, err := p.fetch(ctx, keywords, cidrs)
 				if err != nil {
 					chanError <- fmt.Errorf("fetch: %v", err)
 				} else if p2 != nil {

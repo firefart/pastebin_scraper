@@ -33,7 +33,7 @@ func createZip(filename string, content string) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func getKeysFromMap(in map[string]string) []string {
+func getKeysFromMap(in map[string][]string) []string {
 	keys := make([]string, 0, len(in))
 	for k := range in {
 		keys = append(keys, k)
