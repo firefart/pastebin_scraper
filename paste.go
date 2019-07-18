@@ -88,7 +88,7 @@ func (p *paste) sendPasteMessage(config configuration) (err error) {
 	m := gomail.NewMessage()
 	m.SetHeader("From", config.Mailfrom)
 	m.SetHeader("To", config.Mailto)
-	keywords := strings.Join(getKeysFromMap(p.Matches), ",")
+	keywords := strings.Join(getKeysFromMap(p.Matches), ", ")
 	m.SetHeader("Subject", fmt.Sprintf("Pastebin Alert for %s", keywords))
 
 	filename := fmt.Sprintf("%s.zip", randomString(10))
