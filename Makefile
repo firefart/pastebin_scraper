@@ -4,7 +4,7 @@ GOPATH := $(or $(GOPATH), $(HOME)/go)
 
 .PHONY: build
 build: deps test
-	go build .
+	go build . -trimpath
 
 .PHONY: test
 test: deps

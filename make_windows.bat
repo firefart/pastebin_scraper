@@ -1,10 +1,6 @@
 @echo off
-rem current directory
-set CURDIR=%~dp0
-rem remove last / so build does not error out
-set CURDIR=%CURDIR:~0,-1%
 
-SET BUILDARGS=-ldflags="-s -w" -gcflags="all=-trimpath=%CURDIR%" -asmflags="all=-trimpath=%CURDIR%"
+SET BUILDARGS=-ldflags="-s -w" -trimpath
 
 echo [*] Updating Dependencies
 go get -u
