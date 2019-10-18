@@ -7,7 +7,7 @@ After=network.target network-online.target
 User=pastebin
 Group=nogroup
 SyslogIdentifier=pastebin
-ExecStart=/home/pastebin/pastebin_scraper -config /home/pastebin/config.json
+ExecStart=/home/pastebin/pastebin_scraper -config /home/pastebin/config.json -debug
 Restart=on-failure
 RestartSec=10
 

@@ -6,6 +6,10 @@ GOPATH := $(or $(GOPATH), $(HOME)/go)
 build: deps test
 	go build -trimpath .
 
+.PHONY: linux
+linux: deps test
+	GOOS=linux GOARCH=amd64 GO111MODULE=on go build -trimpath .
+
 .PHONY: test
 test: deps
 	go test -v -race ./...
