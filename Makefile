@@ -4,6 +4,8 @@ GOPATH := $(or $(GOPATH), $(HOME)/go)
 
 .PHONY: build
 build: deps test
+	go vet ./...
+	go fmt ./...
 	go build -trimpath .
 
 .PHONY: linux
