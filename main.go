@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -14,8 +15,7 @@ import (
 )
 
 var (
-	debug = flag.Bool("debug", false, "Print debug output")
-	test  = flag.Bool("test", false, "do not send mails, print them instead")
+	test = flag.Bool("test", false, "do not send mails, print them instead")
 
 	r = rand.New(rand.NewSource(time.Now().UnixNano()))
 
@@ -31,12 +31,6 @@ type keywordType struct {
 
 type cidrType struct {
 	ipNet *net.IPNet
-}
-
-func debugOutput(s string, a ...interface{}) {
-	if *debug {
-		log.Printf("[DEBUG] %s", fmt.Sprintf(s, a...))
-	}
 }
 
 func checkKeywords(body string, keywords *map[string]keywordType) (bool, map[string][]string) {
@@ -77,11 +71,11 @@ func checkCIDRs(body string, cidrs *[]cidrType) (bool, map[string][]string) {
 				ip := net.ParseIP(match)
 				// invalid IP matched
 				if ip == nil {
-					debugOutput("%q is not a valid ip", match)
+					log.Debugf("%q is not a valid ip", match)
 					continue
 				}
 				if cidr.ipNet.Contains(ip) {
-					debugOutput("%v contains %s", cidr.ipNet, ip)
+					log.Debugf("%v contains %s", cidr.ipNet, ip)
 					x = append(x, match)
 					status = true
 				}
@@ -97,7 +91,7 @@ func checkCIDRs(body string, cidrs *[]cidrType) (bool, map[string][]string) {
 func checkExceptions(s string, exceptions []string) bool {
 	for _, x := range exceptions {
 		if strings.Contains(s, x) {
-			debugOutput("String %q contains exception %q", s, x)
+			log.Debugf("String %q contains exception %q", s, x)
 			return true
 		}
 	}
@@ -132,6 +126,7 @@ func parseCIDRs(cidrs []string) (*[]cidrType, error) {
 // nolint: gocyclo
 func main() {
 	configFile := flag.String("config", "", "Config File to use")
+	debug := flag.Bool("debug", false, "Print debug output")
 	var lastCheck time.Time
 
 	chanError := make(chan error)
@@ -141,6 +136,13 @@ func main() {
 	defer close(chanError)
 
 	alredyChecked := make(map[string]time.Time)
+
+	log.SetOutput(os.Stdout)
+	if *debug {
+		log.SetLevel(log.DebugLevel)
+	} else {
+		log.SetLevel(log.InfoLevel)
+	}
 
 	flag.Parse()
 
@@ -166,7 +168,7 @@ func main() {
 
 	go func(c configuration) {
 		for p := range chanOutput {
-			debugOutput("found paste:\n%+v", p)
+			log.Debugf("found paste:\n%+v", p)
 			err = p.sendPasteMessage(c)
 			if err != nil {
 				chanError <- fmt.Errorf("sendPasteMessage: %v", err)
@@ -190,7 +192,7 @@ func main() {
 		// Only fetch the main list once a minute
 		sleepTime := time.Until(lastCheck.Add(1 * time.Minute))
 		if sleepTime > 0 {
-			debugOutput("sleeping for %s", sleepTime)
+			log.Debugf("sleeping for %s", sleepTime)
 			time.Sleep(sleepTime)
 		}
 
@@ -203,7 +205,7 @@ func main() {
 
 		for _, p := range pastes {
 			if _, ok := alredyChecked[p.Key]; ok {
-				debugOutput("skipping key %s as it was already checked", p.Key)
+				log.Debugf("skipping key %s as it was already checked", p.Key)
 			} else {
 				alredyChecked[p.Key] = time.Now()
 				p2, err := p.fetch(ctx, keywords, cidrs)
@@ -221,7 +223,7 @@ func main() {
 		threshold := time.Now().Add(-10 * time.Minute)
 		for k, v := range alredyChecked {
 			if v.Before(threshold) {
-				debugOutput("deleting expired entry %s", k)
+				log.Debugf("deleting expired entry %s", k)
 				delete(alredyChecked, k)
 			}
 		}

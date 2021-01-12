@@ -10,7 +10,7 @@ import (
 )
 
 func sendEmail(config configuration, m *gomail.Message) error {
-	debugOutput("sending mail")
+	log.Debugf("sending mail")
 	if *test {
 		text, err := messageToString(m)
 		if err != nil {
@@ -25,7 +25,7 @@ func sendEmail(config configuration, m *gomail.Message) error {
 }
 
 func sendErrorMessage(config configuration, errorMessage error) error {
-	debugOutput("sending error mail")
+	log.Debugf("sending error mail")
 	m := gomail.NewMessage()
 	m.SetHeader("From", config.Mailfrom)
 	m.SetHeader("To", config.Mailtoerror)

@@ -12,6 +12,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	log "github.com/sirupsen/logrus"
 	gomail "gopkg.in/gomail.v2"
 )
 
@@ -129,7 +130,7 @@ func (p *paste) sendPasteMessage(config configuration) (err error) {
 }
 
 func (p paste) fetch(ctx context.Context, keywords *map[string]keywordType, cidrs *[]cidrType) (*paste, error) {
-	debugOutput("checking paste %s", p.Key)
+	log.Debugf("checking paste %s", p.Key)
 	resp, err := httpRequest(ctx, p.ScrapeURL)
 	if err != nil {
 		// Ignore HTTP based errors like timeout and connection reset
@@ -163,7 +164,7 @@ func (p paste) fetch(ctx context.Context, keywords *map[string]keywordType, cidr
 
 func fetchPasteList(ctx context.Context) ([]paste, error) {
 	var list []paste
-	debugOutput("fetching paste list")
+	log.Debugf("fetching paste list")
 	url := fmt.Sprintf("%s?limit=100", apiEndpoint)
 	resp, err := httpRequest(ctx, url)
 	if err != nil {
