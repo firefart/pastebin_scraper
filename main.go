@@ -127,6 +127,9 @@ func parseCIDRs(cidrs []string) (*[]cidrType, error) {
 func main() {
 	configFile := flag.String("config", "", "Config File to use")
 	debug := flag.Bool("debug", false, "Print debug output")
+
+	flag.Parse()
+
 	var lastCheck time.Time
 
 	chanError := make(chan error)
@@ -143,8 +146,6 @@ func main() {
 	} else {
 		log.SetLevel(log.InfoLevel)
 	}
-
-	flag.Parse()
 
 	log.Println("Starting Pastebin Scraper")
 	config, err := getConfig(*configFile)
