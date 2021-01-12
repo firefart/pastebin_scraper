@@ -4,12 +4,13 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
 	"math/rand"
 	"net"
 	"regexp"
 	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 var (

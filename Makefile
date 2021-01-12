@@ -3,28 +3,28 @@ GOPATH := $(or $(GOPATH), $(HOME)/go)
 .DEFAULT_GOAL := build
 
 .PHONY: build
-build: deps test
+build: update test
 	go vet ./...
 	go fmt ./...
 	go build -trimpath .
 
 .PHONY: linux
-linux: deps test
+linux: update test
 	GOOS=linux GOARCH=amd64 GO111MODULE=on go build -trimpath .
 
 .PHONY: test
-test: deps
+test: update
 	go test -v -race ./...
 
-.PHONY: deps
-deps:
+.PHONY: update
+update:
 	go get -u
 	go mod tidy -v
 
 .PHONY: lint
-lint: deps
+lint:
 	@if [ ! -f "$$(go env GOPATH)/bin/golangci-lint" ]; then \
-		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.24.0; \
+		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.34.1; \
 	fi
 	golangci-lint run ./...
 	go mod tidy

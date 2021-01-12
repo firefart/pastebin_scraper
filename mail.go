@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"crypto/tls"
 	"fmt"
-	"log"
 
+	log "github.com/sirupsen/logrus"
 	gomail "gopkg.in/gomail.v2"
 )
 
