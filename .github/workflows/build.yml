@@ -10,6 +10,14 @@ jobs:
       image: golang:latest
 
     steps:
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '^1.16.0'
+
+      - name: go version
+        run: go version
+
       - name: Checkout sources
         uses: actions/checkout@v2
 

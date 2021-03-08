@@ -10,7 +10,7 @@ build: update test
 
 .PHONY: linux
 linux: update test
-	GOOS=linux GOARCH=amd64 GO111MODULE=on go build -trimpath .
+	GOOS=linux GOARCH=amd64 go build -trimpath .
 
 .PHONY: test
 test: update
@@ -23,8 +23,15 @@ update:
 
 .PHONY: lint
 lint:
-	@if [ ! -f "$$(go env GOPATH)/bin/golangci-lint" ]; then \
-		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.34.1; \
-	fi
-	golangci-lint run ./...
+	"$$(go env GOPATH)/bin/golangci-lint" run ./...
 	go mod tidy
+
+.PHONY: lint-update
+lint-update:
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin
+	$$(go env GOPATH)/bin/golangci-lint --version
+
+.PHONY: lint-docker
+lint-docker:
+	docker pull golangci/golangci-lint:latest
+	docker run --rm -v $$(pwd):/app -w /app golangci/golangci-lint:latest golangci-lint run
