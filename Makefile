@@ -3,7 +3,7 @@ GOPATH := $(or $(GOPATH), $(HOME)/go)
 .DEFAULT_GOAL := build
 
 .PHONY: build
-build: update test
+build:
 	go vet ./...
 	go fmt ./...
 	go build -trimpath .

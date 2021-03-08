@@ -31,4 +31,4 @@ jobs:
 
       - name: Build and Test
         run: |
-          make lint test
+          make build test
