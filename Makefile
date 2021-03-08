@@ -1,5 +1,3 @@
-GOPATH := $(or $(GOPATH), $(HOME)/go)
-
 .DEFAULT_GOAL := build
 
 .PHONY: build
