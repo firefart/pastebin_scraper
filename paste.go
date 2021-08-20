@@ -29,6 +29,7 @@ type paste struct {
 	Expire    string `json:"expire"`
 	Title     string `json:"title"`
 	Syntax    string `json:"syntax"`
+	Hits      string `json:"hits"`
 	User      string `json:"user"`
 	Content   string
 	Matches   map[string][]string
@@ -54,6 +55,7 @@ func (p *paste) String() string {
 		{"Size", p.Size},
 		{"Expire", dateToString(p.Expire)},
 		{"Syntax", p.Syntax},
+		{"Hits", p.Hits},
 	}
 
 	for _, x := range fields {
@@ -156,7 +158,7 @@ func (p paste) fetch(ctx context.Context, keywords *map[string]keywordType, cidr
 		}
 	} else {
 		b, err := httpRespBodyToString(resp)
-		return nil, fmt.Errorf("Output: %s, Error: %v", b, err)
+		return nil, fmt.Errorf("output: %s, error: %v", b, err)
 	}
 	// nothing found
 	return nil, nil
