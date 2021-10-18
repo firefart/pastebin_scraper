@@ -19,7 +19,7 @@ jobs:
         run: go version
 
       - name: Checkout sources
-        uses: actions/checkout@v2.3.4
+        uses: actions/checkout@v2.3.5
 
       - name: Setup Cache
         uses: actions/cache@v2.1.6
