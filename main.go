@@ -5,7 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"math/rand"
-	"net"
+	"net/netip"
 	"os"
 	"regexp"
 	"strings"
@@ -30,7 +30,7 @@ type keywordType struct {
 }
 
 type cidrType struct {
-	ipNet *net.IPNet
+	ipNet netip.Prefix
 }
 
 func checkKeywords(body string, keywords *map[string]keywordType) (bool, map[string][]string) {
@@ -68,9 +68,8 @@ func checkCIDRs(body string, cidrs *[]cidrType) (bool, map[string][]string) {
 		if len(s) > 0 {
 			for _, m := range s {
 				match := strings.TrimSpace(m)
-				ip := net.ParseIP(match)
-				// invalid IP matched
-				if ip == nil {
+				ip, err := netip.ParseAddr(match)
+				if err != nil {
 					log.Debugf("%q is not a valid ip", match)
 					continue
 				}
@@ -114,7 +113,7 @@ func parseKeywords(k []keyword) *map[string]keywordType {
 func parseCIDRs(cidrs []string) (*[]cidrType, error) {
 	var ret []cidrType
 	for _, c := range cidrs {
-		_, n, err := net.ParseCIDR(c)
+		n, err := netip.ParsePrefix(c)
 		if err != nil {
 			return nil, fmt.Errorf("could not parse cidr %s: %v", c, err)
 		}
