@@ -20,35 +20,27 @@ var (
 )
 
 func httpRequest(ctx context.Context, url string) (*http.Response, error) {
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
 	req.Header.Set("User-Agent", userAgent)
 
 	resp, err := client.Do(req)
 	return resp, err
 }
 
-func httpRespBodyToString(resp *http.Response) (res string, err error) {
+func httpRespBodyToString(resp *http.Response) (string, error) {
 	if resp == nil {
 		return "", fmt.Errorf("response is nil")
 	}
-
-	// catch errors when closing and return them
-	defer func() {
-		rerr := resp.Body.Close()
-		if rerr != nil {
-			err = rerr
-		}
-	}()
+	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}
 
-	res = string(body)
+	res := string(body)
 	return res, nil
 }
