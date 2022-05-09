@@ -87,7 +87,7 @@ func (p *paste) String() string {
 	return buffer.String()
 }
 
-func (p *paste) sendPasteMessage(config configuration) (err error) {
+func (p *paste) sendPasteMessage(config configuration) error {
 	m := gomail.NewMessage()
 	m.SetHeader("From", config.Mailfrom)
 	m.SetHeader("To", config.Mailto)
@@ -105,24 +105,13 @@ func (p *paste) sendPasteMessage(config configuration) (err error) {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		rerr := os.Remove(fullPath)
-		if rerr != nil {
-			err = rerr
-		}
-	}()
+	defer f.Close()
+	defer os.Remove(fullPath)
 
 	_, err = f.Write(zipFile)
 	if err != nil {
 		return err
 	}
-
-	defer func() {
-		rerr := f.Close()
-		if rerr != nil {
-			err = rerr
-		}
-	}()
 
 	m.Attach(fullPath)
 
