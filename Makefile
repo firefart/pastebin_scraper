@@ -4,7 +4,7 @@
 build:
 	go vet ./...
 	go fmt ./...
-	go build -trimpath .
+	CGO_ENABLED=0 go build -trimpath .
 
 .PHONY: linux
 linux: update test
