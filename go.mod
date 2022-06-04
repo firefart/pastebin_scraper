@@ -8,6 +8,6 @@ require (
 )
 
 require (
-	golang.org/x/sys v0.0.0-20220403205710-6acee93ad0eb // indirect
+	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 )
