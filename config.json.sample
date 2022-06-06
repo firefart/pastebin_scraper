@@ -1,8 +1,8 @@
 {
   "mailserver": "localhost",
   "mailport": 25,
-  "mailusername:"",
-  "mailpassword":"",
+  "mailusername: "",
+  "mailpassword": "",
   "mailskiptls": true,
   "mailfrom": "Pastebin Alert <xxx@xxx.com>",
   "mailto": "Unknown Person <xxx@xxx.com>",
