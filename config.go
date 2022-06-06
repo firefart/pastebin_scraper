@@ -8,16 +8,19 @@ import (
 )
 
 type configuration struct {
-	Mailserver  string    `json:"mailserver"`
-	Mailport    int       `json:"mailport"`
-	Mailfrom    string    `json:"mailfrom"`
-	Mailonerror bool      `json:"mailonerror"`
-	Mailtoerror string    `json:"mailtoerror"`
-	Mailto      string    `json:"mailto"`
-	Mailsubject string    `json:"mailsubject"`
-	Timeout     string    `json:"timeout"`
-	Keywords    []keyword `json:"keywords"`
-	CIDRs       []string  `json:"cidrs"`
+	Mailserver   string    `json:"mailserver"`
+	Mailport     int       `json:"mailport"`
+	MailUsername string    `json:"mailusername"`
+	MailPassword string    `json:"mailpassword"`
+	MailSkipTLS  bool      `json:"mailskiptls"`
+	Mailfrom     string    `json:"mailfrom"`
+	Mailonerror  bool      `json:"mailonerror"`
+	Mailtoerror  string    `json:"mailtoerror"`
+	Mailto       string    `json:"mailto"`
+	Mailsubject  string    `json:"mailsubject"`
+	Timeout      string    `json:"timeout"`
+	Keywords     []keyword `json:"keywords"`
+	CIDRs        []string  `json:"cidrs"`
 }
 
 type keyword struct {

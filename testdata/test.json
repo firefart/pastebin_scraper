@@ -1,14 +1,25 @@
 {
   "mailserver": "localhost",
   "mailport": 25,
+  "mailusername": "user",
+  "mailpassword": "pass",
+  "mailskiptls": true,
   "mailfrom": "Pastebin Alert <xxx@xxx.com>",
   "mailto": "Unknown Person <xxx@xxx.com>",
   "mailonerror": true,
   "mailtoerror": "error@xxx.xom",
-  "keywords": [
-    {"keyword": "keyword1", "exceptions": ["exception1", "exception2", "exception3"]},
-    {"keyword": "keyword2", "exceptions": ["exception1", "exception2", "exception3"]},
-    {"keyword": "keyword3", "exceptions": ["exception1", "exception2", "exception3"]}
+  "keywords": [{
+      "keyword": "keyword1",
+      "exceptions": ["exception1", "exception2", "exception3"]
+    },
+    {
+      "keyword": "keyword2",
+      "exceptions": ["exception1", "exception2", "exception3"]
+    },
+    {
+      "keyword": "keyword3",
+      "exceptions": ["exception1", "exception2", "exception3"]
+    }
   ],
   "cidrs": [
     "10.0.0.0/8",
