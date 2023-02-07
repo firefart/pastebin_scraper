@@ -1,6 +1,6 @@
 module github.com/FireFart/pastebin_scraper
 
-go 1.18
+go 1.20
 
 require (
 	github.com/sirupsen/logrus v1.9.0
