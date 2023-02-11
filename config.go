@@ -40,6 +40,7 @@ func getConfig(f string) (*configuration, error) {
 	reader := bytes.NewReader(b)
 
 	decoder := json.NewDecoder(reader)
+	decoder.DisallowUnknownFields()
 	c := configuration{}
 	if err = decoder.Decode(&c); err != nil {
 		return nil, err
