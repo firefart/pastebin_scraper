@@ -4,11 +4,11 @@
 build:
 	go vet ./...
 	go fmt ./...
-	CGO_ENABLED=0 go build -trimpath .
+	CGO_ENABLED=0 go build -buildvcs=false -trimpath .
 
 .PHONY: linux
 linux: update test
-	GOOS=linux GOARCH=amd64 go build -trimpath .
+	GOOS=linux GOARCH=amd64 go build -buildvcs=false -trimpath .
 
 .PHONY: test
 test: update
