@@ -33,14 +33,6 @@ func createZip(filename string, content string) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func getKeysFromMap(in map[string][]string) []string {
-	keys := make([]string, 0, len(in))
-	for k := range in {
-		keys = append(keys, k)
-	}
-	return keys
-}
-
 func dateToString(in string) string {
 	i, err := strconv.ParseInt(in, 10, 64)
 	if err != nil {

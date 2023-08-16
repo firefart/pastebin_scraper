@@ -13,6 +13,7 @@ import (
 	"text/tabwriter"
 
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/exp/maps"
 	gomail "gopkg.in/gomail.v2"
 )
 
@@ -39,7 +40,7 @@ func (p *paste) String() string {
 	var buffer bytes.Buffer
 	bw := bufio.NewWriter(&buffer)
 	tw := tabwriter.NewWriter(bw, 0, 5, 3, ' ', 0)
-	keywords := strings.Join(getKeysFromMap(p.Matches), ", ")
+	keywords := strings.Join(maps.Keys(p.Matches), ", ")
 	if _, err := fmt.Fprintf(tw, "Pastebin Alert for Keywords %s\n\n", keywords); err != nil {
 		return fmt.Sprintf("error on tostring: %v", err)
 	}
@@ -91,7 +92,7 @@ func (p *paste) sendPasteMessage(config configuration) error {
 	m := gomail.NewMessage()
 	m.SetHeader("From", config.Mailfrom)
 	m.SetHeader("To", config.Mailto)
-	keywords := strings.Join(getKeysFromMap(p.Matches), ", ")
+	keywords := strings.Join(maps.Keys(p.Matches), ", ")
 	m.SetHeader("Subject", fmt.Sprintf("Pastebin Alert for %s", keywords))
 
 	filename := fmt.Sprintf("%s.zip", randomString(10))
