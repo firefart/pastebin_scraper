@@ -170,7 +170,7 @@ func fetchPasteList(ctx context.Context) ([]paste, error) {
 	}
 	// ip does not have access. Do not panic so error mail will be sent
 	if strings.Contains(body, "DOES NOT HAVE ACCESS") {
-		return list, fmt.Errorf(body)
+		return list, fmt.Errorf("%s", body)
 	}
 
 	jsonErr := json.Unmarshal([]byte(body), &list)
