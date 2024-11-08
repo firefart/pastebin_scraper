@@ -12,12 +12,10 @@ const (
 	userAgent = "Pastebin Scraper (https://firefart.at)"
 )
 
-var (
-	client = &http.Client{
-		// default timeout
-		Timeout: 10 * time.Second,
-	}
-)
+var client = &http.Client{
+	// default timeout
+	Timeout: 10 * time.Second,
+}
 
 func httpRequest(ctx context.Context, url string) (*http.Response, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
