@@ -1,11 +1,11 @@
 module github.com/FireFart/pastebin_scraper
 
-go 1.24
+go 1.24.0
 
 require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.10.0
-	golang.org/x/exp v0.0.0-20250811191247-51f88131bc50
+	golang.org/x/exp v0.0.0-20250813145105-42675adae3e6
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 )
 
