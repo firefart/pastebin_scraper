@@ -5,7 +5,7 @@ go 1.24.0
 require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.10.0
-	golang.org/x/exp v0.0.0-20250813145105-42675adae3e6
+	golang.org/x/exp v0.0.0-20250819193227-8b4c13bb791b
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 )
 
