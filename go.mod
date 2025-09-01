@@ -4,7 +4,7 @@ go 1.25
 
 require (
 	github.com/sirupsen/logrus v1.9.3
-	github.com/stretchr/testify v1.11.0
+	github.com/stretchr/testify v1.11.1
 	golang.org/x/exp v0.0.0-20250819193227-8b4c13bb791b
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 )
